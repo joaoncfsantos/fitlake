@@ -424,11 +424,14 @@ def print_muscle_analysis(muscle_totals: defaultdict[str, float], total_sets: in
     # Sort by total sets (descending)
     sorted_muscles = sorted(muscle_totals.items(), key=lambda x: x[1], reverse=True)
     
-    print("\n" + "=" * 60)
+    # Calculate sum of weighted sets for percentage calculation
+    weighted_total = sum(muscle_totals.values())
+    
+    print("\n" + "=" * 70)
     print("MUSCLE GROUP SUMMARY")
-    print("=" * 60)
-    print(f"{'Muscle Group':<25} {'Weighted Sets':>15}")
-    print("-" * 60)
+    print("=" * 70)
+    print(f"{'Muscle Group':<25} {'Weighted Sets':>15} {'Percentage':>15}")
+    print("-" * 70)
     
     for muscle, total in sorted_muscles:
         # Format as integer if whole number, otherwise with 1 decimal
@@ -436,8 +439,11 @@ def print_muscle_analysis(muscle_totals: defaultdict[str, float], total_sets: in
             formatted = f"{int(total)}"
         else:
             formatted = f"{total:.1f}"
-        print(f"{muscle:<25} {formatted:>15}")
+        
+        # Calculate percentage
+        percentage = (total / weighted_total) * 100 if weighted_total > 0 else 0
+        print(f"{muscle:<25} {formatted:>15} {percentage:>14.1f}%")
     
-    print("-" * 60)
-    print(f"{'TOTAL SETS':<25} {total_sets:>15}")
-    print("=" * 60)
+    print("-" * 70)
+    print(f"{'TOTAL SETS':<25} {total_sets:>15} {'100.0%':>15}")
+    print("=" * 70)
