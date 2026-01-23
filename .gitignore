@@ -1,0 +1,24 @@
+# Environment
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+venv/
+.venv/
+
+# Generated data
+*.csv
+!example_*.csv
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Data
+data/
