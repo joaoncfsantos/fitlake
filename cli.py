@@ -52,6 +52,9 @@ ANALYSIS COMMANDS:
   muscles --days <n>  Analyze muscle engagement for the past N days
                       Aggregates data across multiple workouts
 
+  recovery last       Find the most recent full recovery day
+  recovery --days <n> Count recovery days in the past N days
+
 EXAMPLES:
 
   python cli.py hevy sync                 # Sync all Hevy data
@@ -61,6 +64,8 @@ EXAMPLES:
   python cli.py hevy workout 5            # Show 5th workout
   python cli.py hevy muscles 1            # Analyze muscles for 1st workout
   python cli.py hevy muscles --days 7     # Analyze muscles for past week
+  python cli.py hevy recovery last        # Find last recovery day
+  python cli.py hevy recovery --days 14   # Recovery stats for past 2 weeks
 
 ENVIRONMENT VARIABLES:
 
@@ -83,6 +88,30 @@ def handle_hevy(args: list[str]):
     # Commands that don't require API key
     if command == "schema":
         hevy.print_data_schema()
+        return
+    
+    if command == "recovery":
+        try:
+            if len(args) >= 2 and args[1] == "last":
+                print("Finding last recovery day...")
+                date_str, days_ago = hevy.get_last_recovery_day()
+                if date_str:
+                    print(f"\nLast recovery day: {date_str} ({days_ago} day{'s' if days_ago != 1 else ''} ago)")
+                else:
+                    print("\nNo recovery day found in the past year!")
+            elif len(args) >= 3 and args[1] == "--days":
+                days = int(args[2])
+                print(f"Analyzing recovery for the past {days} days...")
+                recovery_count, workout_count, recovery_dates = hevy.count_recovery_days(days)
+                hevy.print_recovery_analysis(recovery_count, workout_count, recovery_dates, days)
+            else:
+                print("Error: 'recovery' command requires 'last' or '--days <n>'.")
+                print("Usage: python cli.py hevy recovery last")
+                print("       python cli.py hevy recovery --days <n>")
+        except FileNotFoundError as e:
+            print(f"Error: {e}")
+        except ValueError as e:
+            print(f"Error: {e}")
         return
     
     # All other commands require API key

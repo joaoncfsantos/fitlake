@@ -544,3 +544,167 @@ def print_muscle_analysis(muscle_totals: defaultdict[str, float], total_sets: in
     print("-" * 70)
     print(f"{'TOTAL SETS':<25} {total_sets:>15} {'100.0%':>15}")
     print("=" * 70)
+
+
+def get_latest_workouts_csv() -> str:
+    """
+    Find the most recent hevy_workouts CSV file in data/exports.
+    
+    Returns:
+        Path to the most recent CSV file
+        
+    Raises:
+        FileNotFoundError: If no workout CSV files exist
+    """
+    import glob
+    
+    pattern = "data/exports/hevy_workouts_*.csv"
+    files = glob.glob(pattern)
+    
+    if not files:
+        raise FileNotFoundError(
+            "No workout data found. Run 'python cli.py hevy sync workouts' first."
+        )
+    
+    # Sort by filename (which includes timestamp) and return the most recent
+    return sorted(files)[-1]
+
+
+def load_workouts_from_csv(filename: str | None = None) -> list[dict[str, Any]]:
+    """
+    Load workouts from a CSV file.
+    
+    Args:
+        filename: Path to CSV file. If None, uses the most recent export.
+        
+    Returns:
+        List of workout dicts with at least 'start_time' field
+    """
+    if filename is None:
+        filename = get_latest_workouts_csv()
+    
+    workouts = []
+    with open(filename, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            workouts.append(row)
+    
+    return workouts
+
+
+def _get_workout_dates_from_csv(workouts: list[dict[str, Any]]) -> set[str]:
+    """
+    Extract all workout dates from loaded workout data.
+    
+    Args:
+        workouts: List of workout dicts with 'start_time' field
+        
+    Returns:
+        Set of date strings (YYYY-MM-DD) that have workouts
+    """
+    workout_dates = set()
+    
+    for workout in workouts:
+        start_time_str = workout.get("start_time")
+        if not start_time_str:
+            continue
+        
+        try:
+            workout_date = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
+            workout_dates.add(workout_date.strftime("%Y-%m-%d"))
+        except (ValueError, TypeError):
+            continue
+    
+    return workout_dates
+
+
+def get_last_recovery_day() -> tuple[str | None, int]:
+    """
+    Find the most recent full recovery day (day with no workout).
+    
+    Uses locally synced workout data (no API calls).
+    
+    Returns:
+        Tuple of (date string YYYY-MM-DD or None, days ago)
+    """
+    from datetime import timedelta, timezone
+    
+    workouts = load_workouts_from_csv()
+    workout_dates = _get_workout_dates_from_csv(workouts)
+    
+    today = datetime.now(timezone.utc).date()
+    
+    # Look back up to 365 days to find a recovery day
+    max_lookback = 365
+    
+    # Start from yesterday (today might still have a workout later)
+    for days_ago in range(1, max_lookback + 1):
+        check_date = today - timedelta(days=days_ago)
+        date_str = check_date.strftime("%Y-%m-%d")
+        
+        if date_str not in workout_dates:
+            return date_str, days_ago
+    
+    return None, 0
+
+
+def count_recovery_days(days: int) -> tuple[int, int, list[str]]:
+    """
+    Count the number of recovery days in the past N days.
+    
+    Uses locally synced workout data (no API calls).
+    
+    Args:
+        days: Number of days to look back
+        
+    Returns:
+        Tuple of (recovery_days count, workout_days count, list of recovery date strings)
+    """
+    from datetime import timedelta, timezone
+    
+    workouts = load_workouts_from_csv()
+    workout_dates = _get_workout_dates_from_csv(workouts)
+    
+    today = datetime.now(timezone.utc).date()
+    
+    recovery_dates = []
+    # Check each day in the period (excluding today)
+    for days_ago in range(1, days + 1):
+        check_date = today - timedelta(days=days_ago)
+        date_str = check_date.strftime("%Y-%m-%d")
+        
+        if date_str not in workout_dates:
+            recovery_dates.append(date_str)
+    
+    workout_count = days - len(recovery_dates)
+    return len(recovery_dates), workout_count, recovery_dates
+
+
+def print_recovery_analysis(recovery_count: int, workout_count: int, recovery_dates: list[str], days: int) -> None:
+    """
+    Print a formatted summary of recovery days.
+    
+    Args:
+        recovery_count: Number of recovery days
+        workout_count: Number of workout days
+        recovery_dates: List of recovery date strings
+        days: Total days in the period
+    """
+    print("\n" + "=" * 50)
+    print("RECOVERY ANALYSIS")
+    print("=" * 50)
+    print(f"Period: Past {days} days")
+    print("-" * 50)
+    print(f"Recovery days: {recovery_count}")
+    print(f"Workout days:  {workout_count}")
+    print(f"Recovery rate: {(recovery_count / days) * 100:.1f}%")
+    print("-" * 50)
+    
+    if recovery_dates:
+        print("Recovery dates:")
+        for date_str in sorted(recovery_dates, reverse=True)[:10]:
+            days_ago = (datetime.now().date() - datetime.strptime(date_str, "%Y-%m-%d").date()).days
+            print(f"  {date_str} ({days_ago} day{'s' if days_ago != 1 else ''} ago)")
+        if len(recovery_dates) > 10:
+            print(f"  ... and {len(recovery_dates) - 10} more")
+    print("=" * 50)
