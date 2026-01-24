@@ -29,38 +29,38 @@ Usage: python cli.py <platform> <command> [options]
 
 PLATFORMS:
 
-  hevy          Fetch workouts from Hevy (strength training)
+  hevy          Strength training (Hevy)
 
-COMMANDS:
+SETUP COMMANDS:
 
-  schema        Show the data structure schema of workouts.
-                Displays placeholder examples of both the API response and CSV format.
+  sync                Sync all data from the platform (workouts + templates)
+  sync workouts       Sync workouts only (exports to timestamped CSV)
+  sync templates      (Hevy only) Sync exercise templates to data/exercise_templates.csv
 
-  all           Fetch all workouts/activities and export to a timestamped CSV file.
+INFO COMMANDS:
 
-  <n>           Fetch and display the nth workout/activity directly.
+  schema              Show the data structure schema of workouts
 
-  (Hevy only):
-  templates     Fetch all exercise templates and save to data/exercise_templates.csv.
-                This is a one-time setup command.
+DATA COMMANDS:
 
-  muscles <n>   Analyze muscle group engagement for the nth workout.
-                Shows weighted sets per muscle (primary=1, secondary=0.5).
+  workout <n>         Display the nth workout/activity
 
-  muscles-period <days>
-                Analyze muscle group engagement for all workouts in the past
-                N days. Aggregates data across multiple workouts.
+ANALYSIS COMMANDS:
+
+  muscles <n>         Analyze muscle engagement for the nth workout
+                      Shows weighted sets per muscle (primary=1, secondary=0.5)
+  muscles --days <n>  Analyze muscle engagement for the past N days
+                      Aggregates data across multiple workouts
 
 EXAMPLES:
 
-  Hevy:
-    python cli.py hevy schema       # Show workout data structure schema
-    python cli.py hevy 5            # Fetch 5th Hevy workout
-    python cli.py hevy all          # Export all Hevy workouts to CSV
-    python cli.py hevy templates    # Fetch all exercise templates (one-time)
-    python cli.py hevy muscles 1    # Analyze muscles for 1st workout
-    python cli.py hevy muscles-period 7  # Analyze muscles for past 7 days
-
+  python cli.py hevy sync                 # Sync all Hevy data
+  python cli.py hevy sync workouts        # Sync workouts only
+  python cli.py hevy sync templates       # Sync exercise templates
+  python cli.py hevy schema               # Show schema
+  python cli.py hevy workout 5            # Show 5th workout
+  python cli.py hevy muscles 1            # Analyze muscles for 1st workout
+  python cli.py hevy muscles --days 7     # Analyze muscles for past week
 
 ENVIRONMENT VARIABLES:
 
@@ -75,7 +75,7 @@ def handle_hevy(args: list[str]):
     if not args:
         print("Error: No command specified for Hevy.")
         print("Usage: python cli.py hevy <command>")
-        print("Commands: schema, all, <n>")
+        print("Commands: sync, schema, workout <n>, muscles <n>")
         return
     
     command = args[0]
@@ -93,44 +93,68 @@ def handle_hevy(args: list[str]):
         return
     
     try:
-        if command == "all":
-            workouts = hevy.fetch_all_workouts(api_key)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"data/exports/hevy_workouts_{timestamp}.csv"
-            os.makedirs(os.path.dirname(filename), exist_ok=True)
-            hevy.export_to_csv(workouts, filename)
+        if command == "sync":
+            subcommand = args[1] if len(args) > 1 else None
+            
+            if subcommand is None:
+                # Sync everything: workouts + templates
+                print("Syncing all Hevy data...")
+                workouts = hevy.fetch_all_workouts(api_key)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"data/exports/hevy_workouts_{timestamp}.csv"
+                os.makedirs(os.path.dirname(filename), exist_ok=True)
+                hevy.export_to_csv(workouts, filename)
+                
+                templates = hevy.fetch_all_exercise_templates(api_key)
+                hevy.export_exercise_templates_to_csv(templates)
+                print("\nAll Hevy data synced successfully.")
+            
+            elif subcommand == "workouts":
+                workouts = hevy.fetch_all_workouts(api_key)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"data/exports/hevy_workouts_{timestamp}.csv"
+                os.makedirs(os.path.dirname(filename), exist_ok=True)
+                hevy.export_to_csv(workouts, filename)
+            
+            elif subcommand == "templates":
+                templates = hevy.fetch_all_exercise_templates(api_key)
+                hevy.export_exercise_templates_to_csv(templates)
+            
+            else:
+                print(f"Error: Unknown sync target '{subcommand}'")
+                print("Usage: python cli.py hevy sync [workouts|templates]")
         
-        elif command == "templates":
-            templates = hevy.fetch_all_exercise_templates(api_key)
-            hevy.export_exercise_templates_to_csv(templates)
-        
-        elif command == "muscles":
+        elif command == "workout":
             if len(args) < 2:
-                print("Error: 'muscles' command requires a workout number.")
-                print("Usage: python cli.py hevy muscles <n>")
+                print("Error: 'workout' command requires a workout number.")
+                print("Usage: python cli.py hevy workout <n>")
                 return
             n = int(args[1])
-            muscle_totals, total_sets = hevy.analyze_workout_muscles(api_key, n)
-            hevy.print_muscle_analysis(muscle_totals, total_sets)
-        
-        elif command == "muscles-period":
-            if len(args) < 2:
-                print("Error: 'muscles-period' command requires number of days.")
-                print("Usage: python cli.py hevy muscles-period <days>")
-                return
-            days = int(args[1])
-            muscle_totals, total_sets, workout_count = hevy.analyze_muscles_for_period(api_key, days)
-            if workout_count > 0:
-                hevy.print_muscle_analysis(muscle_totals, total_sets)
-            else:
-                print(f"No workouts found in the past {days} days.")
-        
-        else:
-            # Assume it's a number - fetch nth workout
-            n = int(command)
             workout = hevy.fetch_nth_workout(api_key, n)
             if workout:
                 print(json.dumps(workout, indent=2, default=str))
+        
+        elif command == "muscles":
+            # Check for --days flag
+            if len(args) >= 3 and args[1] == "--days":
+                days = int(args[2])
+                muscle_totals, total_sets, workout_count = hevy.analyze_muscles_for_period(api_key, days)
+                if workout_count > 0:
+                    hevy.print_muscle_analysis(muscle_totals, total_sets)
+                else:
+                    print(f"No workouts found in the past {days} days.")
+            elif len(args) >= 2:
+                n = int(args[1])
+                muscle_totals, total_sets = hevy.analyze_workout_muscles(api_key, n)
+                hevy.print_muscle_analysis(muscle_totals, total_sets)
+            else:
+                print("Error: 'muscles' command requires a workout number or --days flag.")
+                print("Usage: python cli.py hevy muscles <n>")
+                print("       python cli.py hevy muscles --days <n>")
+        
+        else:
+            print(f"Error: Unknown command '{command}'")
+            print("Use 'python cli.py help' for available commands.")
     
     except FileNotFoundError as e:
         print(f"Error: {e}")
