@@ -127,45 +127,6 @@ def fetch_nth_workout(api_key: str, n: int) -> dict[str, Any] | None:
     return workout
 
 
-def flatten_workout(workout: dict[str, Any]) -> dict[str, Any]:
-    """Flatten a workout object for CSV export."""
-    # Extract base workout info
-    flat = {
-        "id": workout.get("id"),
-        "title": workout.get("title"),
-        "description": workout.get("description", ""),
-        "start_time": workout.get("start_time"),
-        "end_time": workout.get("end_time"),
-        "created_at": workout.get("created_at"),
-        "updated_at": workout.get("updated_at"),
-    }
-    
-    # Calculate duration if times are available
-    if flat["start_time"] and flat["end_time"]:
-        try:
-            start = datetime.fromisoformat(flat["start_time"].replace("Z", "+00:00"))
-            end = datetime.fromisoformat(flat["end_time"].replace("Z", "+00:00"))
-            duration_minutes = (end - start).total_seconds() / 60
-            flat["duration_minutes"] = round(duration_minutes, 2)
-        except (ValueError, TypeError):
-            flat["duration_minutes"] = None
-    else:
-        flat["duration_minutes"] = None
-    
-    # Count exercises
-    exercises = workout.get("exercises", [])
-    flat["exercise_count"] = len(exercises)
-    
-    # List exercise names
-    exercise_names = [ex.get("title", "") for ex in exercises]
-    flat["exercises"] = "; ".join(exercise_names)
-    
-    # Calculate total sets
-    total_sets = sum(len(ex.get("sets", [])) for ex in exercises)
-    flat["total_sets"] = total_sets
-    
-    return flat
-
 
 def export_to_csv(workouts: list[dict[str, Any]], filename: str = "hevy_workouts.csv"):
     """Export workouts to a CSV file."""
@@ -173,27 +134,24 @@ def export_to_csv(workouts: list[dict[str, Any]], filename: str = "hevy_workouts
         print("No workouts to export.")
         return
     
-    # Flatten all workouts
-    flat_workouts = [flatten_workout(w) for w in workouts]
     
     # Get all unique keys for CSV headers
-    headers = list(flat_workouts[0].keys())
+    headers = list(workouts[0].keys())
     
     # Write to CSV
     with open(filename, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=headers)
         writer.writeheader()
-        writer.writerows(flat_workouts)
+        writer.writerows(workouts)
     
-    print(f"Exported {len(flat_workouts)} workouts to {filename}")
+    print(f"Exported {len(workouts)} workouts to {filename}")
 
 
 def print_data_schema() -> None:
     """
     Print example data schema of workouts.
     
-    Displays both the original API response structure and the flattened
-    CSV-ready version with placeholder values to demonstrate the format.
+    Displays the original API response structure with placeholder values to demonstrate the format.
     """
     # Example workout structure from API
     # Reference: https://api.hevyapp.com/docs/
@@ -229,31 +187,11 @@ def print_data_schema() -> None:
         ]
     }
     
-    # Example flattened structure for CSV
-    example_flattened = {
-        "id": "<string>",
-        "title": "<string>",
-        "description": "<string>",
-        "start_time": "<ISO 8601 datetime>",
-        "end_time": "<ISO 8601 datetime>",
-        "created_at": "<ISO 8601 datetime>",
-        "updated_at": "<ISO 8601 datetime>",
-        "duration_minutes": "<number>",
-        "exercise_count": "<integer>",
-        "exercises": "<semicolon-separated list of exercise titles>",
-        "total_sets": "<integer>"
-    }
     
     print("\n" + "=" * 80)
     print("ORIGINAL DATA STRUCTURE (from Hevy API):")
     print("=" * 80)
     print(json.dumps(example_original, indent=2))
-    
-    print("\n" + "=" * 80)
-    print("FLATTENED DATA STRUCTURE (CSV export format):")
-    print("=" * 80)
-    print(json.dumps(example_flattened, indent=2))
-    print("=" * 80 + "\n")
 
 
 def fetch_all_exercise_templates(api_key: str) -> list[dict[str, Any]]:
