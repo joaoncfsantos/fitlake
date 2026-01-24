@@ -91,8 +91,8 @@ EXAMPLES:
 
   # Garmin
   python cli.py garmin auth               # Show authentication instructions
-  python cli.py garmin sync               # Sync daily stats (past 30 days)
-  python cli.py garmin sync --days 7      # Sync daily stats (past 7 days)
+  python cli.py garmin sync               # Sync daily stats (default: past 30 days) (daily stats and sleep data)
+  python cli.py garmin sync --days 7      # Sync daily stats (past 7 days) (daily stats and sleep data)
   python cli.py garmin sync activities    # Sync all activities
   python cli.py garmin schema             # Show data schema
   python cli.py garmin today              # Show today's health summary

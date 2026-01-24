@@ -35,11 +35,9 @@ def export_daily_stats_to_csv(
         "wellnessKilocalories",
         "floorsAscended",
         "floorsDescended",
-        "floorsAscendedGoal",
         "minHeartRate",
         "maxHeartRate",
         "restingHeartRate",
-        "averageHeartRate",
         "averageStressLevel",
         "maxStressLevel",
         "stressDuration",
@@ -91,8 +89,6 @@ def export_sleep_to_csv(
         "lightSleepSeconds",
         "remSleepSeconds",
         "awakeSleepSeconds",
-        "sleepScores_overall_value",
-        "sleepScores_totalDuration_qualifierKey",
         "sleepStartTimestampLocal",
         "sleepEndTimestampLocal",
         "averageSpO2Value",
@@ -100,6 +96,8 @@ def export_sleep_to_csv(
         "averageRespirationValue",
         "lowestRespirationValue",
         "highestRespirationValue",
+        "avgHeartRate",
+        "sleepScores"
     ]
 
     with open(filename, "w", newline="", encoding="utf-8") as f:
@@ -125,6 +123,8 @@ def export_sleep_to_csv(
                 "averageRespirationValue",
                 "lowestRespirationValue",
                 "highestRespirationValue",
+                "avgHeartRate",
+                "sleepScores",
             ]:
                 row[key] = daily_sleep.get(key)
 

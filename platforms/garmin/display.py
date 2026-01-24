@@ -24,7 +24,6 @@ def print_data_schema() -> None:
         "minHeartRate": "<integer>",
         "maxHeartRate": "<integer>",
         "restingHeartRate": "<integer>",
-        "averageHeartRate": "<integer>",
         "averageStressLevel": "<integer (0-100)>",
         "maxStressLevel": "<integer>",
         "moderateIntensityMinutes": "<integer>",
