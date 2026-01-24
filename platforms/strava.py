@@ -19,6 +19,9 @@ TOKEN_URL = "https://www.strava.com/oauth/token"
 # API pagination
 PAGE_SIZE = 30  # Strava default
 
+# Token cache file
+TOKEN_CACHE_FILE = "data/.strava_token_cache.json"
+
 
 def get_client_credentials() -> tuple[str, str]:
     """Get Strava client ID and secret from environment variables."""
@@ -46,15 +49,61 @@ def get_refresh_token() -> str:
     return refresh_token
 
 
-def refresh_access_token() -> str:
+def load_cached_token() -> dict[str, Any] | None:
     """
-    Refresh the Strava access token using the refresh token.
+    Load the cached access token from file.
     
-    Strava access tokens expire after 6 hours, so we need to refresh them.
+    Returns:
+        Dict with 'access_token' and 'expires_at' if cache exists, None otherwise
+    """
+    try:
+        with open(TOKEN_CACHE_FILE, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+def save_cached_token(access_token: str, expires_at: int) -> None:
+    """
+    Save the access token to cache file.
+    
+    Args:
+        access_token: The OAuth2 access token
+        expires_at: Unix timestamp when the token expires
+    """
+    os.makedirs(os.path.dirname(TOKEN_CACHE_FILE), exist_ok=True)
+    with open(TOKEN_CACHE_FILE, "w") as f:
+        json.dump({
+            "access_token": access_token,
+            "expires_at": expires_at
+        }, f)
+
+
+def get_access_token(force_refresh: bool = False) -> str:
+    """
+    Get a valid Strava access token, using cache when possible.
+    
+    Checks if a cached token exists and is still valid (with 5 min buffer).
+    If valid, returns the cached token. Otherwise, refreshes and caches a new one.
+    
+    Args:
+        force_refresh: If True, bypass cache and always refresh
     
     Returns:
         A valid access token
     """
+    # Check cache first (unless force refresh)
+    if not force_refresh:
+        cached = load_cached_token()
+        if cached:
+            expires_at = cached.get("expires_at", 0)
+            # Add 5 minute buffer before expiry
+            if time.time() < (expires_at - 300):
+                print("Using cached access token.")
+                return cached["access_token"]
+    
+    # Need to refresh
+    print("Refreshing Strava access token...")
     client_id, client_secret = get_client_credentials()
     refresh_token = get_refresh_token()
     
@@ -71,13 +120,19 @@ def refresh_access_token() -> str:
     response.raise_for_status()
     data = response.json()
     
-    # Optionally update the refresh token if a new one is provided
+    # Cache the new token
+    access_token = data["access_token"]
+    expires_at = data["expires_at"]
+    save_cached_token(access_token, expires_at)
+    
+    # Notify if refresh token changed
     new_refresh_token = data.get("refresh_token")
     if new_refresh_token and new_refresh_token != refresh_token:
         print(f"Note: New refresh token received. Update STRAVA_REFRESH_TOKEN in your .env file:")
         print(f"  STRAVA_REFRESH_TOKEN={new_refresh_token}")
     
-    return data["access_token"]
+    return access_token
+
 
 
 def _get_headers(access_token: str) -> dict[str, str]:

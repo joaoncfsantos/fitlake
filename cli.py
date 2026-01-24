@@ -248,8 +248,7 @@ def handle_strava(args: list[str]):
     # Commands that require API credentials
     if command == "sync":
         try:
-            print("Refreshing Strava access token...")
-            access_token = strava.refresh_access_token()
+            access_token = strava.get_access_token()
             
             print("\nFetching athlete profile...")
             athlete = strava.fetch_athlete(access_token)
@@ -279,8 +278,7 @@ def handle_strava(args: list[str]):
                 return
             n = int(args[1])
             
-            print("Refreshing Strava access token...")
-            access_token = strava.refresh_access_token()
+            access_token = strava.get_access_token()
             
             activity = strava.get_detailed_activity(n, access_token)
             if activity:
