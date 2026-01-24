@@ -383,19 +383,20 @@ def _aggregate_muscle_totals(
         aggregate[muscle] += value
 
 
-def analyze_workout_muscles(api_key: str, n: int, templates_file: str = EXERCISE_TEMPLATES_CSV) -> tuple[defaultdict[str, float], int]:
+def analyze_workout_muscles(n: int, templates_file: str = EXERCISE_TEMPLATES_CSV) -> tuple[defaultdict[str, float], int]:
     """
     Analyze muscle group engagement for the nth workout.
     
+    Uses locally synced workout data (no API calls).
+    
     Args:
-        api_key: The API key for authentication
         n: The workout number to analyze (1-indexed)
         templates_file: Path to the exercise templates CSV
         
     Returns:
         Tuple of (muscle_totals dict, total_sets int)
     """
-    workout = fetch_nth_workout(api_key, n)
+    workout = get_nth_workout(n)
     if not workout:
         raise ValueError(f"Workout #{n} not found.")
     
@@ -468,19 +469,20 @@ def fetch_workouts_since(api_key: str, days: int) -> list[dict[str, Any]]:
     return workouts_in_range
 
 
-def analyze_muscles_for_period(api_key: str, days: int, templates_file: str = EXERCISE_TEMPLATES_CSV) -> tuple[defaultdict[str, float], int, int]:
+def analyze_muscles_for_period(days: int, templates_file: str = EXERCISE_TEMPLATES_CSV) -> tuple[defaultdict[str, float], int, int]:
     """
     Analyze muscle group engagement for all workouts in the past N days.
     
+    Uses locally synced workout data (no API calls).
+    
     Args:
-        api_key: The API key for authentication
         days: Number of days to look back
         templates_file: Path to the exercise templates CSV
         
     Returns:
         Tuple of (muscle_totals dict, total_sets int, workout_count int)
     """
-    workouts = fetch_workouts_since(api_key, days)
+    workouts = get_workouts_since(days)
     templates = load_exercise_templates_from_csv(templates_file)
     
     aggregate_totals: defaultdict[str, float] = defaultdict(float)
@@ -578,8 +580,10 @@ def load_workouts_from_csv(filename: str | None = None) -> list[dict[str, Any]]:
         filename: Path to CSV file. If None, uses the most recent export.
         
     Returns:
-        List of workout dicts with at least 'start_time' field
+        List of workout dicts with parsed 'exercises' field
     """
+    import ast
+    
     if filename is None:
         filename = get_latest_workouts_csv()
     
@@ -587,9 +591,72 @@ def load_workouts_from_csv(filename: str | None = None) -> list[dict[str, Any]]:
     with open(filename, "r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
+            # Parse exercises from string representation to actual Python objects
+            if row.get("exercises"):
+                try:
+                    row["exercises"] = ast.literal_eval(row["exercises"])
+                except (ValueError, SyntaxError):
+                    row["exercises"] = []
             workouts.append(row)
     
     return workouts
+
+
+def get_nth_workout(n: int) -> dict[str, Any] | None:
+    """
+    Get the nth workout from locally synced data (1-indexed).
+    
+    Args:
+        n: The position of the workout (1 = most recent, 2 = second most recent, etc.)
+        
+    Returns:
+        The workout dict if found, None otherwise
+    """
+    if n < 1:
+        raise ValueError("n must be >= 1 (1-indexed)")
+    
+    workouts = load_workouts_from_csv()
+    
+    if n > len(workouts):
+        print(f"Workout #{n} not found. Total workouts available: {len(workouts)}")
+        return None
+    
+    workout = workouts[n - 1]  # Convert to 0-indexed
+    print(f"Found workout: {workout.get('title', 'Untitled')} (total: {len(workouts)} workouts)")
+    return workout
+
+
+def get_workouts_since(days: int) -> list[dict[str, Any]]:
+    """
+    Get all workouts from the past N days from locally synced data.
+    
+    Args:
+        days: Number of days to look back
+        
+    Returns:
+        List of workout dicts within the date range
+    """
+    from datetime import timedelta, timezone
+    
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+    workouts = load_workouts_from_csv()
+    
+    workouts_in_range = []
+    for workout in workouts:
+        start_time_str = workout.get("start_time")
+        if not start_time_str:
+            continue
+        
+        try:
+            workout_date = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            continue
+        
+        if workout_date >= cutoff_date:
+            workouts_in_range.append(workout)
+    
+    print(f"Found {len(workouts_in_range)} workout(s) in the past {days} days")
+    return workouts_in_range
 
 
 def _get_workout_dates_from_csv(workouts: list[dict[str, Any]]) -> set[str]:

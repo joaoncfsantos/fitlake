@@ -85,44 +85,15 @@ def handle_hevy(args: list[str]):
     
     command = args[0]
     
-    # Commands that don't require API key
-    if command == "schema":
-        hevy.print_data_schema()
-        return
-    
-    if command == "recovery":
+    # Commands that require API key
+    if command == "sync":
         try:
-            if len(args) >= 2 and args[1] == "last":
-                print("Finding last recovery day...")
-                date_str, days_ago = hevy.get_last_recovery_day()
-                if date_str:
-                    print(f"\nLast recovery day: {date_str} ({days_ago} day{'s' if days_ago != 1 else ''} ago)")
-                else:
-                    print("\nNo recovery day found in the past year!")
-            elif len(args) >= 3 and args[1] == "--days":
-                days = int(args[2])
-                print(f"Analyzing recovery for the past {days} days...")
-                recovery_count, workout_count, recovery_dates = hevy.count_recovery_days(days)
-                hevy.print_recovery_analysis(recovery_count, workout_count, recovery_dates, days)
-            else:
-                print("Error: 'recovery' command requires 'last' or '--days <n>'.")
-                print("Usage: python cli.py hevy recovery last")
-                print("       python cli.py hevy recovery --days <n>")
-        except FileNotFoundError as e:
-            print(f"Error: {e}")
+            api_key = hevy.get_api_key()
         except ValueError as e:
-            print(f"Error: {e}")
-        return
-    
-    # All other commands require API key
-    try:
-        api_key = hevy.get_api_key()
-    except ValueError as e:
-        print(f"Configuration Error: {e}")
-        return
-    
-    try:
-        if command == "sync":
+            print(f"Configuration Error: {e}")
+            return
+        
+        try:
             subcommand = args[1] if len(args) > 1 else None
             
             if subcommand is None:
@@ -153,42 +124,83 @@ def handle_hevy(args: list[str]):
                 print(f"Error: Unknown sync target '{subcommand}'")
                 print("Usage: python cli.py hevy sync [workouts|templates]")
         
-        elif command == "workout":
+        except FileNotFoundError as e:
+            print(f"Error: {e}")
+        except ValueError as e:
+            print(f"Error: {e}")
+        return
+    
+    # Commands that use local data (no API key required)
+    if command == "schema":
+        hevy.print_data_schema()
+        return
+    
+    if command == "workout":
+        try:
             if len(args) < 2:
                 print("Error: 'workout' command requires a workout number.")
                 print("Usage: python cli.py hevy workout <n>")
                 return
             n = int(args[1])
-            workout = hevy.fetch_nth_workout(api_key, n)
+            workout = hevy.get_nth_workout(n)
             if workout:
                 print(json.dumps(workout, indent=2, default=str))
-        
-        elif command == "muscles":
-            # Check for --days flag
+        except FileNotFoundError as e:
+            print(f"Error: {e}")
+        except ValueError as e:
+            print(f"Error: {e}")
+        return
+    
+    if command == "muscles":
+        try:
             if len(args) >= 3 and args[1] == "--days":
                 days = int(args[2])
-                muscle_totals, total_sets, workout_count = hevy.analyze_muscles_for_period(api_key, days)
+                muscle_totals, total_sets, workout_count = hevy.analyze_muscles_for_period(days)
                 if workout_count > 0:
                     hevy.print_muscle_analysis(muscle_totals, total_sets)
                 else:
                     print(f"No workouts found in the past {days} days.")
             elif len(args) >= 2:
                 n = int(args[1])
-                muscle_totals, total_sets = hevy.analyze_workout_muscles(api_key, n)
+                muscle_totals, total_sets = hevy.analyze_workout_muscles(n)
                 hevy.print_muscle_analysis(muscle_totals, total_sets)
             else:
                 print("Error: 'muscles' command requires a workout number or --days flag.")
                 print("Usage: python cli.py hevy muscles <n>")
                 print("       python cli.py hevy muscles --days <n>")
-        
-        else:
-            print(f"Error: Unknown command '{command}'")
-            print("Use 'python cli.py help' for available commands.")
+        except FileNotFoundError as e:
+            print(f"Error: {e}")
+        except ValueError as e:
+            print(f"Error: {e}")
+        return
     
-    except FileNotFoundError as e:
-        print(f"Error: {e}")
-    except ValueError as e:
-        print(f"Error: {e}")
+    if command == "recovery":
+        try:
+            if len(args) >= 2 and args[1] == "last":
+                print("Finding last recovery day...")
+                date_str, days_ago = hevy.get_last_recovery_day()
+                if date_str:
+                    print(f"\nLast recovery day: {date_str} ({days_ago} day{'s' if days_ago != 1 else ''} ago)")
+                else:
+                    print("\nNo recovery day found in the past year!")
+            elif len(args) >= 3 and args[1] == "--days":
+                days = int(args[2])
+                print(f"Analyzing recovery for the past {days} days...")
+                recovery_count, workout_count, recovery_dates = hevy.count_recovery_days(days)
+                hevy.print_recovery_analysis(recovery_count, workout_count, recovery_dates, days)
+            else:
+                print("Error: 'recovery' command requires 'last' or '--days <n>'.")
+                print("Usage: python cli.py hevy recovery last")
+                print("       python cli.py hevy recovery --days <n>")
+        except FileNotFoundError as e:
+            print(f"Error: {e}")
+        except ValueError as e:
+            print(f"Error: {e}")
+        return
+    
+    # Unknown command
+    print(f"Error: Unknown command '{command}'")
+    print("Use 'python cli.py help' for available commands.")
 
 
 def main():
