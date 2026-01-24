@@ -6,6 +6,7 @@ Supported platforms:
   - Hevy (hevy.py)
 """
 
+import os
 import sys
 from datetime import datetime
 from dotenv import load_dotenv
@@ -45,6 +46,10 @@ COMMANDS:
   muscles <n>   Analyze muscle group engagement for the nth workout.
                 Shows weighted sets per muscle (primary=1, secondary=0.5).
 
+  muscles-period <days>
+                Analyze muscle group engagement for all workouts in the past
+                N days. Aggregates data across multiple workouts.
+
 EXAMPLES:
 
   Hevy:
@@ -54,6 +59,7 @@ EXAMPLES:
     python cli.py hevy all          # Export all Hevy workouts to CSV
     python cli.py hevy templates    # Fetch all exercise templates (one-time)
     python cli.py hevy muscles 1    # Analyze muscles for 1st workout
+    python cli.py hevy muscles-period 7  # Analyze muscles for past 7 days
 
 
 ENVIRONMENT VARIABLES:
@@ -88,7 +94,8 @@ def handle_hevy(args: list[str]):
         elif command == "all":
             workouts = hevy.fetch_all_workouts(api_key)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"hevy_workouts_{timestamp}.csv"
+            filename = f"data/exports/hevy_workouts_{timestamp}.csv"
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
             hevy.export_to_csv(workouts, filename)
         
         elif command == "templates":
@@ -103,6 +110,18 @@ def handle_hevy(args: list[str]):
             n = int(args[1])
             muscle_totals, total_sets = hevy.analyze_workout_muscles(api_key, n)
             hevy.print_muscle_analysis(muscle_totals, total_sets)
+        
+        elif command == "muscles-period":
+            if len(args) < 2:
+                print("Error: 'muscles-period' command requires number of days.")
+                print("Usage: python cli.py hevy muscles-period <days>")
+                return
+            days = int(args[1])
+            muscle_totals, total_sets, workout_count = hevy.analyze_muscles_for_period(api_key, days)
+            if workout_count > 0:
+                hevy.print_muscle_analysis(muscle_totals, total_sets)
+            else:
+                print(f"No workouts found in the past {days} days.")
         
         else:
             # Assume it's a number - fetch nth workout

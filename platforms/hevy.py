@@ -347,39 +347,28 @@ def load_exercise_templates_from_csv(filename: str = EXERCISE_TEMPLATES_CSV) -> 
     return templates
 
 
-def analyze_workout_muscles(api_key: str, n: int, templates_file: str = EXERCISE_TEMPLATES_CSV) -> tuple[defaultdict[str, float], int]:
+def _calculate_workout_muscles(
+    workout: dict[str, Any],
+    templates: dict[str, dict[str, Any]],
+    verbose: bool = False
+) -> tuple[defaultdict[str, float], int]:
     """
-    Analyze muscle group engagement for the nth workout.
+    Calculate muscle group engagement for a single workout.
     
-    For each exercise in the workout:
-    - Primary muscle group: 1.0 weight per set
-    - Secondary muscle groups: 0.5 weight per set
+    This is the core calculation logic used by both single workout
+    and multi-workout analysis functions.
     
     Args:
-        api_key: The API key for authentication
-        n: The workout number to analyze (1-indexed)
-        templates_file: Path to the exercise templates CSV
+        workout: The workout dict from the API
+        templates: Dict mapping template_id -> template data
+        verbose: If True, print detailed info about each exercise
         
     Returns:
         Tuple of (muscle_totals dict, total_sets int)
-        - muscle_totals: Dict mapping muscle_group -> total weighted sets
-        - total_sets: The actual total number of sets in the workout
     """
-    # Fetch the workout
-    workout = fetch_nth_workout(api_key, n)
-    if not workout:
-        raise ValueError(f"Workout #{n} not found.")
-    
-    # Load exercise templates
-    templates = load_exercise_templates_from_csv(templates_file)
-    
-    # Calculate muscle engagement
     muscle_totals: defaultdict[str, float] = defaultdict(float)
-    total_sets = 0   
+    total_sets = 0
     exercises = workout.get("exercises", [])
-    
-    print(f"\nAnalyzing muscle groups for workout: {workout.get('title', 'Untitled')}")
-    print("-" * 60)
     
     for exercise in exercises:
         exercise_template_id = exercise.get("exercise_template_id")
@@ -389,24 +378,159 @@ def analyze_workout_muscles(api_key: str, n: int, templates_file: str = EXERCISE
         total_sets += num_sets
         
         if exercise_template_id not in templates:
-            print(f"  Warning: Template not found for '{exercise_title}' (ID: {exercise_template_id})")
+            if verbose:
+                print(f"  Warning: Template not found for '{exercise_title}' (ID: {exercise_template_id})")
             continue
         
         template = templates[exercise_template_id]
         primary_muscle = template.get("primary_muscle_group")
         secondary_muscles = template.get("secondary_muscle_groups", [])
         
-        print(f"  {exercise_title}: {num_sets} sets")
-        print(f"    Primary: {primary_muscle} (+{num_sets * PRIMARY_MUSCLE_WEIGHT})")
+        if verbose:
+            print(f"  {exercise_title}: {num_sets} sets")
+            print(f"    Primary: {primary_muscle} (+{num_sets * PRIMARY_MUSCLE_WEIGHT})")
         
         if primary_muscle:
             muscle_totals[primary_muscle] += num_sets * PRIMARY_MUSCLE_WEIGHT
         
         for muscle in secondary_muscles:
             muscle_totals[muscle] += num_sets * SECONDARY_MUSCLE_WEIGHT
-            print(f"    Secondary: {muscle} (+{num_sets * SECONDARY_MUSCLE_WEIGHT})")
+            if verbose:
+                print(f"    Secondary: {muscle} (+{num_sets * SECONDARY_MUSCLE_WEIGHT})")
     
     return muscle_totals, total_sets
+
+
+def _aggregate_muscle_totals(
+    aggregate: defaultdict[str, float],
+    workout_totals: defaultdict[str, float]
+) -> None:
+    """Add workout muscle totals to the aggregate (in-place)."""
+    for muscle, value in workout_totals.items():
+        aggregate[muscle] += value
+
+
+def analyze_workout_muscles(api_key: str, n: int, templates_file: str = EXERCISE_TEMPLATES_CSV) -> tuple[defaultdict[str, float], int]:
+    """
+    Analyze muscle group engagement for the nth workout.
+    
+    Args:
+        api_key: The API key for authentication
+        n: The workout number to analyze (1-indexed)
+        templates_file: Path to the exercise templates CSV
+        
+    Returns:
+        Tuple of (muscle_totals dict, total_sets int)
+    """
+    workout = fetch_nth_workout(api_key, n)
+    if not workout:
+        raise ValueError(f"Workout #{n} not found.")
+    
+    templates = load_exercise_templates_from_csv(templates_file)
+    
+    print(f"\nAnalyzing muscle groups for workout: {workout.get('title', 'Untitled')}")
+    print("-" * 60)
+    
+    return _calculate_workout_muscles(workout, templates, verbose=True)
+
+
+def fetch_workouts_since(api_key: str, days: int) -> list[dict[str, Any]]:
+    """
+    Fetch all workouts from the past N days.
+    
+    Args:
+        api_key: The API key for authentication
+        days: Number of days to look back
+        
+    Returns:
+        List of workout dicts within the date range
+    """
+    from datetime import timedelta, timezone
+    
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+    workouts_in_range = []
+    page = 1
+    headers = _get_headers(api_key)
+    
+    print(f"Fetching workouts from the past {days} days...")
+    print(f"Cutoff date: {cutoff_date.strftime('%Y-%m-%d %H:%M:%S')} UTC")
+    
+    while True:
+        params = {"page": page, "pageSize": PAGE_SIZE}
+        response = requests.get(API_BASE_URL, headers=headers, params=params, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        
+        workouts = data.get("workouts", [])
+        if not workouts:
+            break
+        
+        past_cutoff = False
+        for workout in workouts:
+            start_time_str = workout.get("start_time")
+            if not start_time_str:
+                continue
+            
+            try:
+                workout_date = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
+            except (ValueError, TypeError):
+                continue
+            
+            if workout_date < cutoff_date:
+                past_cutoff = True
+                break
+            
+            workouts_in_range.append(workout)
+        
+        if past_cutoff:
+            break
+        
+        page_count = data.get("page_count", 1)
+        if page >= page_count:
+            break
+        
+        page += 1
+    
+    print(f"Found {len(workouts_in_range)} workout(s) in the past {days} days")
+    return workouts_in_range
+
+
+def analyze_muscles_for_period(api_key: str, days: int, templates_file: str = EXERCISE_TEMPLATES_CSV) -> tuple[defaultdict[str, float], int, int]:
+    """
+    Analyze muscle group engagement for all workouts in the past N days.
+    
+    Args:
+        api_key: The API key for authentication
+        days: Number of days to look back
+        templates_file: Path to the exercise templates CSV
+        
+    Returns:
+        Tuple of (muscle_totals dict, total_sets int, workout_count int)
+    """
+    workouts = fetch_workouts_since(api_key, days)
+    templates = load_exercise_templates_from_csv(templates_file)
+    
+    aggregate_totals: defaultdict[str, float] = defaultdict(float)
+    total_sets = 0
+    
+    print("-" * 60)
+    for workout in workouts:
+        workout_title = workout.get("title", "Untitled")
+        start_time_str = workout.get("start_time", "")
+        try:
+            workout_date = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
+            date_str = workout_date.strftime("%Y-%m-%d")
+        except (ValueError, TypeError):
+            date_str = "Unknown"
+        
+        print(f"  [{date_str}] {workout_title}")
+        
+        workout_muscles, workout_sets = _calculate_workout_muscles(workout, templates)
+        _aggregate_muscle_totals(aggregate_totals, workout_muscles)
+        total_sets += workout_sets
+    
+    print("-" * 60)
+    return aggregate_totals, total_sets, len(workouts)
 
 
 def print_muscle_analysis(muscle_totals: defaultdict[str, float], total_sets: int) -> None:
