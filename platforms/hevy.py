@@ -85,49 +85,6 @@ def fetch_all_workouts(api_key: str) -> list[dict[str, Any]]:
     return all_workouts
 
 
-def fetch_nth_workout(api_key: str, n: int) -> dict[str, Any] | None:
-    """
-    Fetch the nth workout from the API (1-indexed).
-    
-    Uses pageSize=1 and page=n to efficiently fetch only the single workout
-    at position n, minimizing data transfer.
-    
-    Args:
-        api_key: The API key for authentication
-        n: The position of the workout to fetch (1 = first workout, 2 = second, etc.)
-    
-    Returns:
-        The workout dict if found, None otherwise
-    """
-    if n < 1:
-        raise ValueError("n must be >= 1 (1-indexed)")
-    
-    headers = _get_headers(api_key)
-    # Use pageSize=1 and page=n to fetch exactly the nth workout
-    params = {
-        "page": n,
-        "pageSize": 1,
-    }
-    
-    print(f"Fetching workout #{n} (using pageSize=1, page={n})...")
-    
-    response = requests.get(API_BASE_URL, headers=headers, params=params, timeout=30)
-    response.raise_for_status()
-    data = response.json()
-    
-    workouts = data.get("workouts", [])
-    page_count = data.get("page_count", 0)
-    
-    if not workouts:
-        print(f"Workout #{n} not found. Total workouts available: {page_count}")
-        return None
-    
-    workout = workouts[0]
-    print(f"Found workout: {workout.get('title', 'Untitled')} (total: {page_count} workouts)")
-    return workout
-
-
-
 def export_to_csv(workouts: list[dict[str, Any]], filename: str = "hevy_workouts.csv"):
     """Export workouts to a CSV file."""
     if not workouts:
@@ -407,66 +364,6 @@ def analyze_workout_muscles(n: int, templates_file: str = EXERCISE_TEMPLATES_CSV
     
     return _calculate_workout_muscles(workout, templates, verbose=True)
 
-
-def fetch_workouts_since(api_key: str, days: int) -> list[dict[str, Any]]:
-    """
-    Fetch all workouts from the past N days.
-    
-    Args:
-        api_key: The API key for authentication
-        days: Number of days to look back
-        
-    Returns:
-        List of workout dicts within the date range
-    """
-    from datetime import timedelta, timezone
-    
-    cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
-    workouts_in_range = []
-    page = 1
-    headers = _get_headers(api_key)
-    
-    print(f"Fetching workouts from the past {days} days...")
-    print(f"Cutoff date: {cutoff_date.strftime('%Y-%m-%d %H:%M:%S')} UTC")
-    
-    while True:
-        params = {"page": page, "pageSize": PAGE_SIZE}
-        response = requests.get(API_BASE_URL, headers=headers, params=params, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-        
-        workouts = data.get("workouts", [])
-        if not workouts:
-            break
-        
-        past_cutoff = False
-        for workout in workouts:
-            start_time_str = workout.get("start_time")
-            if not start_time_str:
-                continue
-            
-            try:
-                workout_date = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
-            except (ValueError, TypeError):
-                continue
-            
-            if workout_date < cutoff_date:
-                past_cutoff = True
-                break
-            
-            workouts_in_range.append(workout)
-        
-        if past_cutoff:
-            break
-        
-        page_count = data.get("page_count", 1)
-        if page >= page_count:
-            break
-        
-        page += 1
-    
-    print(f"Found {len(workouts_in_range)} workout(s) in the past {days} days")
-    return workouts_in_range
 
 
 def analyze_muscles_for_period(days: int, templates_file: str = EXERCISE_TEMPLATES_CSV) -> tuple[defaultdict[str, float], int, int]:
