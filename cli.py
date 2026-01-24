@@ -270,7 +270,7 @@ def handle_strava(args: list[str]):
             print(f"Error: {e}")
         return
     
-    # Commands that use local data (no API calls)
+    # Activity command (fetches detailed activity from API for calories etc.)
     if command == "activity":
         try:
             if len(args) < 2:
@@ -278,14 +278,22 @@ def handle_strava(args: list[str]):
                 print("Usage: python cli.py strava activity <n>")
                 return
             n = int(args[1])
-            activity = strava.get_nth_activity(n)
+            
+            print("Refreshing Strava access token...")
+            access_token = strava.refresh_access_token()
+            
+            activity = strava.get_detailed_activity(n, access_token)
             if activity:
                 strava.print_activity_summary(activity)
         except FileNotFoundError as e:
             print(f"Error: {e}")
         except ValueError as e:
             print(f"Error: {e}")
+        except Exception as e:
+            print(f"Error: {e}")
         return
+    
+    # Commands that use local data (no API calls)
     
     if command == "stats":
         try:

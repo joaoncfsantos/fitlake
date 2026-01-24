@@ -434,28 +434,40 @@ def load_activities_from_csv(filename: str | None = None) -> list[dict[str, Any]
     return activities
 
 
-def get_nth_activity(n: int) -> dict[str, Any] | None:
+def get_detailed_activity(n: int, access_token: str) -> dict[str, Any] | None:
     """
-    Get the nth activity from locally synced data (1-indexed).
+    Get the nth activity with full details from the API (1-indexed).
+    
+    This fetches the DetailedActivity which includes calories and other
+    fields not available in SummaryActivity.
     
     Args:
         n: The position of the activity (1 = most recent, 2 = second most recent, etc.)
+        access_token: The OAuth2 access token
         
     Returns:
-        The activity dict if found, None otherwise
+        The detailed activity dict if found, None otherwise
     """
     if n < 1:
         raise ValueError("n must be >= 1 (1-indexed)")
     
-    activities = load_activities_from_csv()
+    # Fetch the nth activity from the API (page=n, per_page=1)
+    print(f"Fetching activity #{n} from Strava API...")
+    activities = fetch_activities_page(access_token, page=n, per_page=1)
     
-    if n > len(activities):
-        print(f"Activity #{n} not found. Total activities available: {len(activities)}")
+    if not activities:
+        print(f"Activity #{n} not found.")
         return None
     
-    activity = activities[n - 1]  # Convert to 0-indexed
-    print(f"Found activity: {activity.get('name', 'Untitled')} (total: {len(activities)} activities)")
-    return activity
+    summary_activity = activities[0]
+    activity_id = summary_activity.get('id')
+    activity_name = summary_activity.get('name', 'Untitled')
+    
+    print(f"Fetching detailed activity: {activity_name} (ID: {activity_id})...")
+    
+    # Fetch the detailed activity from the API
+    detailed_activity = fetch_activity_by_id(access_token, int(activity_id))
+    return detailed_activity
 
 
 def get_activities_since(days: int) -> list[dict[str, Any]]:
@@ -523,9 +535,16 @@ def print_activity_summary(activity: dict[str, Any]) -> None:
         minutes, seconds = divmod(remainder, 60)
         print(f"Elapsed Time:  {int(hours)}h {int(minutes)}m {int(seconds)}s")
     
-    # Speed
+    # Pace and Speed
     avg_speed = activity.get('average_speed', 0)
     if avg_speed:
+        # Calculate pace (min/km)
+        pace_min_per_km = 1000 / (avg_speed * 60)  # Convert m/s to min/km
+        pace_minutes = int(pace_min_per_km)
+        pace_seconds = int((pace_min_per_km - pace_minutes) * 60)
+        print(f"Avg Pace:      {pace_minutes}:{pace_seconds:02d} min/km")
+
+        # Calculate speed (km/h)
         avg_speed_kmh = avg_speed * 3.6
         print(f"Avg Speed:     {avg_speed_kmh:.1f} km/h ({avg_speed:.2f} m/s)")
     
@@ -693,8 +712,6 @@ def print_activity_stats(stats: dict[str, Any], days: int | None = None) -> None
     minutes, _ = divmod(remainder, 60)
     print(f"Total Moving Time:   {int(hours)}h {int(minutes)}m")
     
-    print(f"Total Elevation:     {stats['total_elevation_gain_m']:.0f} m")
-    print(f"Total Calories:      {stats['total_calories']:.0f} kcal")
     
     print("\n" + "-" * 70)
     print("BY ACTIVITY TYPE:")
