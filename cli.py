@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 
 import platforms.hevy as hevy
 import platforms.strava as strava
+import platforms.garmin as garmin
 
 # Load environment variables
 load_dotenv()
@@ -33,13 +34,16 @@ PLATFORMS:
 
   hevy          Strength training (Hevy)
   strava        Cardio activities (Strava - running, cycling, swimming, etc.)
+  garmin        Health & fitness data (Garmin Connect)
 
 SETUP COMMANDS:
 
   sync                Sync all data from the platform
   sync workouts       (Hevy) Sync workouts only
   sync templates      (Hevy) Sync exercise templates
-  auth                (Strava) Show authentication setup instructions
+  sync activities     (Garmin) Sync activities only
+  auth                Show authentication setup instructions
+  logout              (Garmin) Clear saved authentication tokens
 
 INFO COMMANDS:
 
@@ -48,7 +52,9 @@ INFO COMMANDS:
 DATA COMMANDS:
 
   workout <n>         (Hevy) Display the nth workout
-  activity <n>        (Strava) Display the nth activity
+  activity <n>        (Strava/Garmin) Display the nth activity
+  today               (Garmin) Show today's health summary
+  sleep               (Garmin) Show last night's sleep data
 
 ANALYSIS COMMANDS (Hevy):
 
@@ -83,6 +89,17 @@ EXAMPLES:
   python cli.py strava stats              # Show all-time statistics
   python cli.py strava stats --days 30    # Show stats for past 30 days
 
+  # Garmin
+  python cli.py garmin auth               # Show authentication instructions
+  python cli.py garmin sync               # Sync daily stats (past 30 days)
+  python cli.py garmin sync --days 7      # Sync daily stats (past 7 days)
+  python cli.py garmin sync activities    # Sync all activities
+  python cli.py garmin schema             # Show data schema
+  python cli.py garmin today              # Show today's health summary
+  python cli.py garmin sleep              # Show last night's sleep data
+  python cli.py garmin activity 1         # Show most recent activity
+  python cli.py garmin logout             # Clear saved tokens
+
 ENVIRONMENT VARIABLES:
 
   Hevy:
@@ -93,6 +110,11 @@ ENVIRONMENT VARIABLES:
     STRAVA_CLIENT_SECRET      Your Strava API client secret
     STRAVA_REFRESH_TOKEN      Your Strava OAuth refresh token
     (Run 'python cli.py strava auth' for setup instructions)
+
+  Garmin:
+    GARMIN_EMAIL              Your Garmin Connect email
+    GARMIN_PASSWORD           Your Garmin Connect password
+    (Run 'python cli.py garmin auth' for setup instructions)
 
 """)
 
@@ -318,6 +340,187 @@ def handle_strava(args: list[str]):
     print(f"Error: Unknown command '{command}'")
     print("Use 'python cli.py help' for available commands.")
 
+def handle_garmin(args: list[str]):
+    """Handle Garmin-related commands."""
+    from datetime import date, timedelta
+
+    if not args:
+        print("Error: No command specified for Garmin.")
+        print("Usage: python cli.py garmin <command>")
+        print("Commands: auth, sync, schema, today, sleep, activity <n>, logout")
+        return
+
+    command = args[0]
+
+    # Auth command (no credentials needed)
+    if command == "auth":
+        garmin.print_auth_instructions()
+        return
+
+    # Schema command (no credentials needed)
+    if command == "schema":
+        garmin.print_data_schema()
+        return
+
+    # Logout command
+    if command == "logout":
+        garmin.clear_tokens()
+        return
+
+    # Commands that require authentication
+    if command == "sync":
+        try:
+            client = garmin.get_client()
+
+            subcommand = args[1] if len(args) > 1 else None
+
+            # Parse --days flag
+            days = 30  # default
+            if len(args) >= 3 and args[1] == "--days":
+                days = int(args[2])
+                subcommand = None
+            elif len(args) >= 4 and args[2] == "--days":
+                days = int(args[3])
+
+            if subcommand == "activities":
+                # Sync activities only
+                activities = garmin.fetch_all_activities(client)
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"data/exports/garmin_activities_{timestamp}.csv"
+                os.makedirs(os.path.dirname(filename), exist_ok=True)
+                garmin.export_activities_to_csv(activities, filename)
+
+            else:
+                # Sync daily stats (default)
+                print(f"\nSyncing Garmin daily stats for the past {days} days...")
+                end_date = date.today()
+                start_date = end_date - timedelta(days=days - 1)
+
+                all_stats = []
+                all_sleep = []
+                current_date = start_date
+
+                while current_date <= end_date:
+                    print(f"  Fetching {current_date}...")
+
+                    # Fetch daily stats
+                    try:
+                        stats = garmin.fetch_daily_stats(client, current_date)
+                        if stats:
+                            stats["date"] = current_date.isoformat()
+                            all_stats.append(stats)
+                    except Exception as e:
+                        print(f"    Warning: Could not fetch stats: {e}")
+
+                    # Fetch sleep data
+                    try:
+                        sleep = garmin.fetch_sleep_data(client, current_date)
+                        if sleep:
+                            sleep["date"] = current_date.isoformat()
+                            all_sleep.append(sleep)
+                    except Exception:
+                        pass
+
+                    current_date += timedelta(days=1)
+
+                # Export to CSV
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                os.makedirs("data/exports", exist_ok=True)
+
+                if all_stats:
+                    stats_filename = f"data/exports/garmin_daily_stats_{timestamp}.csv"
+                    garmin.export_daily_stats_to_csv(all_stats, stats_filename)
+
+                if all_sleep:
+                    sleep_filename = f"data/exports/garmin_sleep_{timestamp}.csv"
+                    garmin.export_sleep_to_csv(all_sleep, sleep_filename)
+
+                print(f"\nGarmin data synced successfully.")
+                print(f"  Daily stats: {len(all_stats)} days")
+                print(f"  Sleep data:  {len(all_sleep)} days")
+
+        except ValueError as e:
+            print(f"Configuration Error: {e}")
+        except Exception as e:
+            print(f"Error: {e}")
+        return
+
+    if command == "today":
+        try:
+            client = garmin.get_client()
+            today = date.today()
+
+            print(f"\nFetching today's health data...")
+
+            # Fetch today's stats
+            stats = garmin.fetch_daily_stats(client, today)
+            if stats:
+                stats["date"] = today.isoformat()
+                garmin.print_daily_summary(stats)
+
+            # Try to fetch sleep (last night)
+            sleep = garmin.fetch_sleep_data(client, today)
+            if sleep:
+                garmin.print_sleep_summary(sleep)
+
+        except ValueError as e:
+            print(f"Configuration Error: {e}")
+        except Exception as e:
+            print(f"Error: {e}")
+        return
+
+    if command == "sleep":
+        try:
+            client = garmin.get_client()
+            today = date.today()
+
+            print(f"\nFetching sleep data...")
+            sleep = garmin.fetch_sleep_data(client, today)
+
+            if sleep:
+                garmin.print_sleep_summary(sleep)
+            else:
+                print("No sleep data available for last night.")
+
+        except ValueError as e:
+            print(f"Configuration Error: {e}")
+        except Exception as e:
+            print(f"Error: {e}")
+        return
+
+    if command == "activity":
+        try:
+            if len(args) < 2:
+                print("Error: 'activity' command requires an activity number.")
+                print("Usage: python cli.py garmin activity <n>")
+                return
+
+            n = int(args[1])
+            if n < 1:
+                print("Error: Activity number must be >= 1")
+                return
+
+            client = garmin.get_client()
+
+            print(f"\nFetching activity #{n}...")
+            activities = garmin.fetch_activities(client, start=n - 1, limit=1)
+
+            if activities:
+                garmin.print_activity_summary(activities[0])
+            else:
+                print(f"Activity #{n} not found.")
+
+        except ValueError as e:
+            print(f"Error: {e}")
+        except Exception as e:
+            print(f"Error: {e}")
+        return
+
+    # Unknown command
+    print(f"Error: Unknown command '{command}'")
+    print("Use 'python cli.py help' for available commands.")
+
+    
 
 def main():
     """Main entry point."""
@@ -332,11 +535,13 @@ def main():
         handle_hevy(args)
     elif platform == "strava":
         handle_strava(args)
+    elif platform == "garmin":
+        handle_garmin(args)
     elif platform in ["help", "-h", "--help"]:
         print_help()
     else:
         print(f"Unknown platform: {platform}")
-        print("Supported platforms: hevy, strava")
+        print("Supported platforms: hevy, strava, garmin")
         print("Use 'python cli.py help' for more information.")
 
 
