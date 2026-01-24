@@ -6,6 +6,7 @@ Supported platforms:
   - Hevy (hevy.py)
 """
 
+import json
 import os
 import sys
 from datetime import datetime
@@ -32,8 +33,8 @@ PLATFORMS:
 
 COMMANDS:
 
-  print [n]     Show the data structure of the nth workout/activity (default: 1)
-                Displays both the original API response and the flattened version.
+  schema        Show the data structure schema of workouts.
+                Displays placeholder examples of both the API response and CSV format.
 
   all           Fetch all workouts/activities and export to a timestamped CSV file.
 
@@ -53,8 +54,7 @@ COMMANDS:
 EXAMPLES:
 
   Hevy:
-    python cli.py hevy print        # Show structure of 1st Hevy workout
-    python cli.py hevy print 25     # Show structure of 25th Hevy workout
+    python cli.py hevy schema       # Show workout data structure schema
     python cli.py hevy 5            # Fetch 5th Hevy workout
     python cli.py hevy all          # Export all Hevy workouts to CSV
     python cli.py hevy templates    # Fetch all exercise templates (one-time)
@@ -72,26 +72,28 @@ ENVIRONMENT VARIABLES:
 
 def handle_hevy(args: list[str]):
     """Handle Hevy-related commands."""
+    if not args:
+        print("Error: No command specified for Hevy.")
+        print("Usage: python cli.py hevy <command>")
+        print("Commands: schema, all, <n>")
+        return
+    
+    command = args[0]
+    
+    # Commands that don't require API key
+    if command == "schema":
+        hevy.print_data_schema()
+        return
+    
+    # All other commands require API key
     try:
         api_key = hevy.get_api_key()
     except ValueError as e:
         print(f"Configuration Error: {e}")
         return
     
-    if not args:
-        print("Error: No command specified for Hevy.")
-        print("Usage: python cli.py hevy <command>")
-        print("Commands: print [n], all, <n>")
-        return
-    
-    command = args[0]
-    
     try:
-        if command == "print":
-            n = int(args[1]) if len(args) > 1 else 1
-            hevy.print_data_structures(api_key, n)
-        
-        elif command == "all":
+        if command == "all":
             workouts = hevy.fetch_all_workouts(api_key)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"data/exports/hevy_workouts_{timestamp}.csv"
@@ -126,7 +128,9 @@ def handle_hevy(args: list[str]):
         else:
             # Assume it's a number - fetch nth workout
             n = int(command)
-            hevy.print_data_structures(api_key, n)
+            workout = hevy.fetch_nth_workout(api_key, n)
+            if workout:
+                print(json.dumps(workout, indent=2, default=str))
     
     except FileNotFoundError as e:
         print(f"Error: {e}")

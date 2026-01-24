@@ -188,36 +188,71 @@ def export_to_csv(workouts: list[dict[str, Any]], filename: str = "hevy_workouts
     print(f"Exported {len(flat_workouts)} workouts to {filename}")
 
 
-def print_data_structures(api_key: str, n: int = 1) -> None:
+def print_data_schema() -> None:
     """
-    Print the original and flattened data structures for the nth workout.
+    Print example data schema of workouts.
     
-    Efficiently fetches only the single workout at position n using
-    pageSize=1 and page=n, then displays both the original API response
-    and the flattened version.
-    
-    Args:
-        api_key: The API key for authentication
-        n: The position of the workout to fetch (1 = first, default)
+    Displays both the original API response structure and the flattened
+    CSV-ready version with placeholder values to demonstrate the format.
     """
-    workout = fetch_nth_workout(api_key, n)
+    # Example workout structure from API
+    # Reference: https://api.hevyapp.com/docs/
+    example_original = {
+        "id": "<string>",
+        "title": "<string>",
+        "routine_id": "<string | null>",
+        "description": "<string>",
+        "start_time": "<ISO 8601 datetime>",
+        "end_time": "<ISO 8601 datetime>",
+        "updated_at": "<ISO 8601 datetime>",
+        "created_at": "<ISO 8601 datetime>",
+        "exercises": [
+            {
+                "index": "<integer>",
+                "title": "<string>",
+                "notes": "<string>",
+                "exercise_template_id": "<string>",
+                "superset_id": "<integer | null>",
+                "sets": [
+                    {
+                        "index": "<integer>",
+                        "type": "<warmup | normal | failure | dropset>",
+                        "weight_kg": "<number | null>",
+                        "reps": "<integer | null>",
+                        "distance_meters": "<integer | null>",
+                        "duration_seconds": "<integer | null>",
+                        "rpe": "<number | null>",
+                        "custom_metric": "<number | null>"
+                    }
+                ]
+            }
+        ]
+    }
     
-    if not workout:
-        print("No workout to display.")
-        return
+    # Example flattened structure for CSV
+    example_flattened = {
+        "id": "<string>",
+        "title": "<string>",
+        "description": "<string>",
+        "start_time": "<ISO 8601 datetime>",
+        "end_time": "<ISO 8601 datetime>",
+        "created_at": "<ISO 8601 datetime>",
+        "updated_at": "<ISO 8601 datetime>",
+        "duration_minutes": "<number>",
+        "exercise_count": "<integer>",
+        "exercises": "<semicolon-separated list of exercise titles>",
+        "total_sets": "<integer>"
+    }
     
-    # Print original data structure from API
     print("\n" + "=" * 80)
-    print(f"ORIGINAL DATA STRUCTURE (workout #{n} from API):")
+    print("ORIGINAL DATA STRUCTURE (from Hevy API):")
     print("=" * 80)
-    print(json.dumps(workout, indent=2, default=str))
+    print(json.dumps(example_original, indent=2))
     
-    # Print flattened data structure
     print("\n" + "=" * 80)
-    print(f"FLATTENED DATA STRUCTURE (workout #{n}, ready for CSV):")
+    print("FLATTENED DATA STRUCTURE (CSV export format):")
     print("=" * 80)
-    flat_workout = flatten_workout(workout)
-    print(json.dumps(flat_workout, indent=2, default=str))
+    print(json.dumps(example_flattened, indent=2))
     print("=" * 80 + "\n")
 
 
