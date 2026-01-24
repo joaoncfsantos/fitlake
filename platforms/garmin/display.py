@@ -9,79 +9,127 @@ from typing import Any
 
 def print_data_schema() -> None:
     """
-    Print example data schema of Garmin daily stats and activities.
+    Print example data schema of Garmin CSV exports.
+
+    Displays the CSV export structures with placeholder values to demonstrate the format.
     """
+    # Daily stats CSV structure (garmin_daily_stats_*.csv)
     example_daily_stats = {
-        "date": "<YYYY-MM-DD>",
+        "date": "<string> (YYYY-MM-DD)",
         "totalSteps": "<integer>",
         "dailyStepGoal": "<integer>",
-        "totalDistanceMeters": "<float>",
-        "totalKilocalories": "<integer>",
-        "activeKilocalories": "<integer>",
-        "bmrKilocalories": "<integer>",
-        "floorsAscended": "<integer>",
-        "floorsDescended": "<integer>",
-        "minHeartRate": "<integer>",
-        "maxHeartRate": "<integer>",
-        "restingHeartRate": "<integer>",
-        "averageStressLevel": "<integer (0-100)>",
-        "maxStressLevel": "<integer>",
-        "moderateIntensityMinutes": "<integer>",
-        "vigorousIntensityMinutes": "<integer>",
-        "bodyBatteryHighestValue": "<integer (0-100)>",
-        "bodyBatteryLowestValue": "<integer (0-100)>",
-        "sleepingSeconds": "<integer>",
+        "totalDistanceMeters": "<float> (meters)",
+        "totalKilocalories": "<float> (kcal)",
+        "activeKilocalories": "<float> (kcal)",
+        "bmrKilocalories": "<float> (kcal)",
+        "wellnessKilocalories": "<float> (kcal)",
+        "floorsAscended": "<float>",
+        "floorsDescended": "<float>",
+        "minHeartRate": "<integer> (bpm)",
+        "maxHeartRate": "<integer> (bpm)",
+        "restingHeartRate": "<integer> (bpm)",
+        "averageStressLevel": "<integer> (0-100)",
+        "maxStressLevel": "<integer> (0-100)",
+        "stressDuration": "<integer> (seconds)",
+        "restStressDuration": "<integer> (seconds)",
+        "activityStressDuration": "<integer> (seconds)",
+        "lowStressDuration": "<integer> (seconds)",
+        "mediumStressDuration": "<integer> (seconds)",
+        "highStressDuration": "<integer> (seconds)",
+        "moderateIntensityMinutes": "<integer> (minutes)",
+        "vigorousIntensityMinutes": "<integer> (minutes)",
+        "intensityMinutesGoal": "<integer> (minutes)",
+        "sleepingSeconds": "<integer> (seconds)",
+        "bodyBatteryChargedValue": "<integer> (0-100)",
+        "bodyBatteryDrainedValue": "<integer> (0-100)",
+        "bodyBatteryHighestValue": "<integer> (0-100)",
+        "bodyBatteryLowestValue": "<integer> (0-100)",
     }
 
+    # Sleep CSV structure (garmin_sleep_*.csv)
     example_sleep = {
-        "dailySleepDTO": {
-            "sleepTimeSeconds": "<integer>",
-            "napTimeSeconds": "<integer>",
-            "deepSleepSeconds": "<integer>",
-            "lightSleepSeconds": "<integer>",
-            "remSleepSeconds": "<integer>",
-            "awakeSleepSeconds": "<integer>",
-            "sleepStartTimestampLocal": "<timestamp>",
-            "sleepEndTimestampLocal": "<timestamp>",
-        },
-        "sleepScores": {
-            "overall": {"value": "<integer (0-100)>"},
-            "totalDuration": {"qualifierKey": "<EXCELLENT|GOOD|FAIR|POOR>"},
-        },
+        "date": "<string> (YYYY-MM-DD)",
+        "sleepTimeSeconds": "<integer> (seconds)",
+        "napTimeSeconds": "<integer> (seconds)",
+        "deepSleepSeconds": "<integer> (seconds)",
+        "lightSleepSeconds": "<integer> (seconds)",
+        "remSleepSeconds": "<integer> (seconds)",
+        "awakeSleepSeconds": "<integer> (seconds)",
+        "sleepStartTimestampLocal": "<integer> (milliseconds since epoch)",
+        "sleepEndTimestampLocal": "<integer> (milliseconds since epoch)",
+        "averageSpO2Value": "<float | null> (percentage)",
+        "lowestSpO2Value": "<float | null> (percentage)",
+        "averageRespirationValue": "<float> (breaths/min)",
+        "lowestRespirationValue": "<float> (breaths/min)",
+        "highestRespirationValue": "<float> (breaths/min)",
+        "avgHeartRate": "<float> (bpm)",
+        "sleepScores": "<dict> (nested: overall, totalDuration, stress, etc.)",
     }
 
+    # Activities CSV structure (garmin_activities_*.csv)
     example_activity = {
-        "activityId": "<long>",
+        "activityId": "<integer>",
         "activityName": "<string>",
-        "activityType": {"typeKey": "<running|cycling|swimming|...>"},
-        "startTimeLocal": "<ISO 8601 datetime>",
-        "distance": "<float (meters)>",
-        "duration": "<float (seconds)>",
-        "elevationGain": "<float (meters)>",
-        "averageSpeed": "<float (m/s)>",
-        "maxSpeed": "<float (m/s)>",
-        "calories": "<integer>",
-        "averageHR": "<integer>",
-        "maxHR": "<integer>",
-        "aerobicTrainingEffect": "<float (0-5)>",
-        "anaerobicTrainingEffect": "<float (0-5)>",
-        "vO2MaxValue": "<float>",
+        "activityType": "<string> (running, cycling, swimming, etc.)",
+        "sportType": "<string>",
+        "startTimeLocal": "<string> (ISO 8601 datetime)",
+        "startTimeGMT": "<string> (ISO 8601 datetime)",
+        "distance": "<float> (meters)",
+        "duration": "<float> (seconds)",
+        "elapsedDuration": "<float> (seconds)",
+        "movingDuration": "<float> (seconds)",
+        "elevationGain": "<float> (meters)",
+        "elevationLoss": "<float> (meters)",
+        "averageSpeed": "<float> (m/s)",
+        "maxSpeed": "<float> (m/s)",
+        "calories": "<float> (kcal)",
+        "bmrCalories": "<float> (kcal)",
+        "averageHR": "<float> (bpm)",
+        "maxHR": "<float> (bpm)",
+        "averageRunningCadenceInStepsPerMinute": "<float> (spm)",
+        "maxRunningCadenceInStepsPerMinute": "<float> (spm)",
+        "steps": "<integer>",
+        "avgPower": "<float | null> (watts)",
+        "maxPower": "<float | null> (watts)",
+        "normPower": "<float | null> (watts)",
+        "aerobicTrainingEffect": "<float> (0-5)",
+        "anaerobicTrainingEffect": "<float> (0-5)",
+        "trainingEffectLabel": "<string> (TEMPO, BASE, etc.)",
+        "activityTrainingLoad": "<float>",
+        "minTemperature": "<float | null> (celsius)",
+        "maxTemperature": "<float | null> (celsius)",
+        "vO2MaxValue": "<float | null> (ml/kg/min)",
+        "lactateThresholdBpm": "<integer | null> (bpm)",
+        "deviceId": "<integer>",
+        "locationName": "<string | null>",
     }
 
     print("\n" + "=" * 80)
-    print("GARMIN DAILY STATS STRUCTURE:")
+    print("GARMIN DAILY STATS CSV STRUCTURE (garmin_daily_stats_*.csv):")
     print("=" * 80)
     print(json.dumps(example_daily_stats, indent=2))
 
     print("\n" + "=" * 80)
-    print("GARMIN SLEEP DATA STRUCTURE:")
+    print("GARMIN SLEEP CSV STRUCTURE (garmin_sleep_*.csv):")
     print("=" * 80)
     print(json.dumps(example_sleep, indent=2))
 
     print("\n" + "=" * 80)
-    print("GARMIN ACTIVITY STRUCTURE:")
+    print("GARMIN ACTIVITIES CSV STRUCTURE (garmin_activities_*.csv):")
     print("=" * 80)
     print(json.dumps(example_activity, indent=2))
+
+    print("\n" + "=" * 80)
+    print("ACTIVITY TYPES:")
+    print("=" * 80)
+    print(
+        """
+running, cycling, swimming, walking, hiking, strength_training, cardio,
+indoor_cycling, treadmill_running, elliptical, stair_stepper, yoga, pilates,
+trail_running, open_water_swimming, mountain_biking, gravel_cycling,
+virtual_ride, virtual_run, skiing, snowboarding, cross_country_skiing, etc.
+    """
+    )
 
 
 def print_daily_summary(stats: dict[str, Any]) -> None:
