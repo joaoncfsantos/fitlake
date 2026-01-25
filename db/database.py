@@ -1,18 +1,12 @@
 """
 Database setup and session management.
 
-Uses SQLAlchemy ORM with SQLite. The design avoids database-specific
-features to allow easy migration to PostgreSQL later.
+Uses SQLAlchemy ORM with PostgreSQL.
 
 Usage:
     from db import SessionLocal, init_db
 
-    # Initialize tables on startup
     init_db()
-
-    # Get a session
-    with SessionLocal() as session:
-        # ... use session ...
 """
 
 import os
@@ -22,18 +16,18 @@ from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-# Database URL - defaults to SQLite file in project root
-# To switch to PostgreSQL, change to: "postgresql://user:pass@localhost/fitlake"
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./fitlake.db")
 
-# SQLite-specific: check_same_thread is only needed for SQLite
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+DATABASE_URL = os.getenv("DATABASE_URL","")
 
-# Create engine
+if DATABASE_URL.startswith("postgres://"):    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+
 engine = create_engine(
     DATABASE_URL,
-    connect_args=connect_args,
-    echo=os.getenv("SQL_ECHO", "false").lower() == "true",  # Set SQL_ECHO=true to see queries
+    pool_size=5,           
+    max_overflow=10,       
+    pool_pre_ping=True,    
+    pool_recycle=300,      
 )
 
 # Session factory
