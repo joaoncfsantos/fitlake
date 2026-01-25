@@ -261,3 +261,18 @@ def fetch_training_status(client: Garmin, target_date: date) -> dict[str, Any] |
         return client.get_training_status(date_str)
     except Exception:
         return None
+
+
+
+def upload_fit_file(client: Garmin, fit_file_path: str) -> dict[str, Any]:
+    """
+    Upload a FIT file to Garmin Connect.
+    
+    Args:
+        client: Authenticated Garmin client
+        fit_file_path: Path to the .fit file to upload
+        
+    Returns:
+        Response from Garmin Connect API
+    """
+    return client.upload_activity(fit_file_path)
