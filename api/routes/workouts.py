@@ -10,6 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from api.auth import RequireAPIKey
 from api.dependencies import DbSession
 from db import crud
 
@@ -94,6 +95,7 @@ class WorkoutListResponse(BaseModel):
 @router.get("/workouts", response_model=WorkoutListResponse)
 def list_workouts(
     db: DbSession,
+    _api_key: RequireAPIKey,
     platform: Optional[str] = Query(None, description="Filter by platform (hevy)"),
     since: Optional[datetime] = Query(None, description="Filter workouts after this date"),
     until: Optional[datetime] = Query(None, description="Filter workouts before this date"),
@@ -138,7 +140,7 @@ def list_workouts(
 
 
 @router.get("/workouts/{workout_id}", response_model=WorkoutResponse)
-def get_workout(workout_id: int, db: DbSession):
+def get_workout(workout_id: int, db: DbSession, _api_key: RequireAPIKey):
     """
     Get a specific workout by its database ID.
 
@@ -151,7 +153,7 @@ def get_workout(workout_id: int, db: DbSession):
 
 
 @router.get("/workouts/platform/{platform}/{external_id}", response_model=WorkoutResponse)
-def get_workout_by_external_id(platform: str, external_id: str, db: DbSession):
+def get_workout_by_external_id(platform: str, external_id: str, db: DbSession, _api_key: RequireAPIKey):
     """
     Get a specific workout by its platform and external ID.
 

@@ -10,6 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from api.auth import RequireAPIKey
 from api.dependencies import DbSession
 from db import crud
 
@@ -55,6 +56,7 @@ class ActivityListResponse(BaseModel):
 @router.get("/activities", response_model=ActivityListResponse)
 def list_activities(
     db: DbSession,
+    _api_key: RequireAPIKey,
     platform: Optional[str] = Query(None, description="Filter by platform (strava, garmin)"),
     activity_type: Optional[str] = Query(None, description="Filter by activity type (Run, Ride, etc.)"),
     since: Optional[datetime] = Query(None, description="Filter activities after this date"),
@@ -86,7 +88,7 @@ def list_activities(
 
 
 @router.get("/activities/{activity_id}", response_model=ActivityResponse)
-def get_activity(activity_id: int, db: DbSession):
+def get_activity(activity_id: int, db: DbSession, _api_key: RequireAPIKey):
     """
     Get a specific activity by its database ID.
     """
@@ -97,7 +99,7 @@ def get_activity(activity_id: int, db: DbSession):
 
 
 @router.get("/activities/platform/{platform}/{external_id}", response_model=ActivityResponse)
-def get_activity_by_external_id(platform: str, external_id: str, db: DbSession):
+def get_activity_by_external_id(platform: str, external_id: str, db: DbSession, _api_key: RequireAPIKey):
     """
     Get a specific activity by its platform and external ID.
 
