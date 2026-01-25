@@ -63,6 +63,15 @@ ANALYSIS COMMANDS (Hevy):
   recovery last       Find the most recent full recovery day
   recovery --days <n> Count recovery days in the past N days
 
+GARMIN IMPORT COMMANDS (Hevy):
+
+  export-for-garmin   Export filtered workouts (excludes cardio-only) to CSV
+  generate-fit <n>    Generate a FIT file for the nth workout
+  
+GARMIN UPLOAD COMMANDS:
+
+  upload-fit <path>   Upload a FIT file to Garmin Connect
+
 ANALYSIS COMMANDS (Strava):
 
   stats               Show all-time activity statistics
@@ -99,6 +108,13 @@ EXAMPLES:
   python cli.py garmin sleep              # Show last night's sleep data
   python cli.py garmin activity 1         # Show most recent activity
   python cli.py garmin logout             # Clear saved tokens
+  python cli.py garmin upload-fit <file>  # Upload FIT file to Garmin Connect
+  
+  # Hevy to Garmin Import Workflow
+  python cli.py hevy sync                 # 1. Sync Hevy data
+  python cli.py hevy export-for-garmin    # 2. Filter workouts (optional)
+  python cli.py hevy generate-fit 1       # 3. Generate FIT file for workout #1
+  python cli.py garmin upload-fit data/fit_files/workout.fit  # 4. Upload to Garmin
 
 ENVIRONMENT VARIABLES:
 
@@ -240,6 +256,60 @@ def handle_hevy(args: list[str]):
             print(f"Error: {e}")
         except ValueError as e:
             print(f"Error: {e}")
+        return
+    
+    if command == "export-for-garmin":
+        """Export filtered workouts (excluding cardio-only) for Garmin import."""
+        try:
+            from platforms.hevy.garmin_sync import export_filtered_workouts
+            output_file = export_filtered_workouts()
+            print(f"\n✓ Success! Filtered workouts saved to: {output_file}")
+        except FileNotFoundError as e:
+            print(f"Error: {e}")
+        except Exception as e:
+            print(f"Error: {e}")
+        return
+    
+    if command == "generate-fit":
+        """Generate a FIT file for a specific workout."""
+        try:
+            if len(args) < 2:
+                print("Error: 'generate-fit' command requires a workout number.")
+                print("Usage: python cli.py hevy generate-fit <n>")
+                return
+            
+            n = int(args[1])
+            workout = hevy.get_nth_workout(n)
+            
+            if not workout:
+                return
+            
+            # Generate FIT file
+            from platforms.hevy.fit_generator import generate_fit_file
+            
+            # Create output filename
+            workout_title = workout.get("title", "workout").replace(" ", "_")
+            workout_date = workout.get("start_time", "").split("T")[0]
+            output_path = f"data/fit_files/{workout_title}_{workout_date}.fit"
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            
+            print(f"Generating FIT file for workout: {workout.get('title', 'Untitled')}")
+            print(f"Start time: {workout.get('start_time')}")
+            
+            fit_path = generate_fit_file(workout, output_path)
+            print(f"\n✓ Success! FIT file generated: {fit_path}")
+            print(f"\nYou can now upload this file to Garmin Connect:")
+            print(f"  1. Go to https://connect.garmin.com/modern/import-data")
+            print(f"  2. Upload the file: {fit_path}")
+            
+        except FileNotFoundError as e:
+            print(f"Error: {e}")
+        except ValueError as e:
+            print(f"Error: {e}")
+        except Exception as e:
+            print(f"Error generating FIT file: {e}")
+            import traceback
+            traceback.print_exc()
         return
     
     # Unknown command
@@ -514,6 +584,39 @@ def handle_garmin(args: list[str]):
             print(f"Error: {e}")
         except Exception as e:
             print(f"Error: {e}")
+        return
+    
+    if command == "upload-fit":
+        """Upload a FIT file to Garmin Connect."""
+        try:
+            if len(args) < 2:
+                print("Error: 'upload-fit' command requires a file path.")
+                print("Usage: python cli.py garmin upload-fit <path/to/file.fit>")
+                return
+            
+            fit_file_path = args[1]
+            
+            # Check if file exists
+            if not os.path.exists(fit_file_path):
+                print(f"Error: File not found: {fit_file_path}")
+                return
+            
+            client = garmin.get_client()
+            
+            print(f"\nUploading FIT file to Garmin Connect...")
+            print(f"File: {fit_file_path}")
+            
+            response = garmin.upload_fit_file(client, fit_file_path)
+            
+            print("\n✓ Success! Activity uploaded to Garmin Connect.")
+            print(f"Response: {response}")
+            
+        except ValueError as e:
+            print(f"Configuration Error: {e}")
+        except Exception as e:
+            print(f"Error uploading file: {e}")
+            import traceback
+            traceback.print_exc()
         return
 
     # Unknown command

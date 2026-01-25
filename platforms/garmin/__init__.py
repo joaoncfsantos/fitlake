@@ -26,6 +26,7 @@ from .client import (
     fetch_user_settings,
     fetch_training_readiness,
     fetch_training_status,
+    upload_fit_file,
 )
 
 # Storage (CSV export/import)
@@ -69,6 +70,7 @@ __all__ = [
     "fetch_user_settings",
     "fetch_training_readiness",
     "fetch_training_status",
+    "upload_fit_file",
     # Storage
     "export_daily_stats_to_csv",
     "export_sleep_to_csv",
