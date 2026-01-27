@@ -20,7 +20,12 @@ import platforms.hevy as hevy
 import platforms.strava as strava
 import platforms.garmin as garmin
 
-from .commands.sync import sync_hevy_to_db, sync_strava_to_db, sync_garmin_to_db
+from .commands.sync import (
+    sync_garmin_to_db,
+    sync_hevy_templates_to_db,
+    sync_hevy_to_db,
+    sync_strava_to_db,
+)
 
 # Load environment variables
 load_dotenv()
@@ -81,6 +86,7 @@ EXAMPLES:
   python cli.py hevy sync --db            # Sync to database only
   python cli.py hevy sync workouts        # Sync workouts only
   python cli.py hevy sync templates       # Sync exercise templates
+  python cli.py hevy sync templates --db  # Sync exercise templates to database only
   python cli.py hevy schema               # Show schema
   python cli.py hevy workout 5            # Show 5th workout
   python cli.py hevy muscles 1            # Analyze muscles for 1st workout
@@ -126,7 +132,7 @@ ENVIRONMENT VARIABLES:
     (Run 'python cli.py garmin auth' for setup instructions)
 
   Database:
-    DATABASE_URL              Database URL (default: sqlite:///./fitlake.db)
+    DATABASE_URL              Database URL (PostgreSQL)
 
 """)
 
@@ -165,13 +171,18 @@ def handle_hevy(args: list[str]):
                     os.makedirs(os.path.dirname(filename), exist_ok=True)
                     hevy.export_to_csv(workouts, filename)
 
-                # Sync to database
+                # Sync workouts to database
                 sync_hevy_to_db(workouts)
 
-                # Sync templates (CSV only, no DB model for templates yet)
+                # Sync templates
+                templates = hevy.fetch_all_exercise_templates(api_key)
+
+                # Export templates to CSV (unless --db flag)
                 if not db_only:
-                    templates = hevy.fetch_all_exercise_templates(api_key)
                     hevy.export_exercise_templates_to_csv(templates)
+
+                # Sync templates to database
+                sync_hevy_templates_to_db(templates)
 
                 print("\nAll Hevy data synced successfully.")
 
@@ -188,7 +199,13 @@ def handle_hevy(args: list[str]):
 
             elif subcommand == "templates":
                 templates = hevy.fetch_all_exercise_templates(api_key)
-                hevy.export_exercise_templates_to_csv(templates)
+
+                # Export to CSV (unless --db flag)
+                if not db_only:
+                    hevy.export_exercise_templates_to_csv(templates)
+
+                # Sync to database
+                sync_hevy_templates_to_db(templates)
 
             else:
                 print(f"Error: Unknown sync target '{subcommand}'")

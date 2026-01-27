@@ -61,3 +61,21 @@ def sync_hevy_to_db(workouts: list[dict]) -> int:
         count = sync_service.sync_hevy_workouts(db, workouts)
         print(f"  Synced {count} workouts to database")
         return count
+
+
+def sync_hevy_templates_to_db(templates: list[dict]) -> int:
+    """
+    Sync Hevy exercise templates to the database.
+
+    Args:
+        templates: List of exercise template dicts from Hevy API
+
+    Returns:
+        Number of templates synced
+    """
+    init_db()  # Ensure tables exist
+
+    with get_db_session() as db:
+        count = sync_service.sync_hevy_exercise_templates(db, templates)
+        print(f"  Synced {count} exercise templates to database")
+        return count

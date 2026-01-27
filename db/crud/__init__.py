@@ -12,6 +12,13 @@ from .activities import (
     get_activity_by_external_id,
     upsert_activity,
 )
+from .exercise_templates import (
+    create_exercise_template,
+    get_exercise_template,
+    get_exercise_template_by_external_id,
+    get_exercise_templates,
+    upsert_exercise_template,
+)
 from .workouts import (
     create_workout,
     get_workout,
@@ -26,6 +33,11 @@ __all__ = [
     "get_activity_by_external_id",
     "get_activities",
     "upsert_activity",
+    "create_exercise_template",
+    "get_exercise_template",
+    "get_exercise_template_by_external_id",
+    "get_exercise_templates",
+    "upsert_exercise_template",
     "create_workout",
     "get_workout",
     "get_workout_by_external_id",
