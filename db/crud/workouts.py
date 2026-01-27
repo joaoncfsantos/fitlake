@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
 from db.models import Workout
 
@@ -41,7 +41,6 @@ def get_workout(db: Session, workout_id: int) -> Optional[Workout]:
     """
     stmt = (
         select(Workout)
-        .options(selectinload(Workout.exercises))
         .where(Workout.id == workout_id)
     )
     return db.execute(stmt).scalar_one_or_none()
@@ -63,7 +62,6 @@ def get_workout_by_external_id(
     """
     stmt = (
         select(Workout)
-        .options(selectinload(Workout.exercises))
         .where(
             Workout.platform == platform,
             Workout.external_id == external_id,
@@ -96,7 +94,6 @@ def get_workouts(
     """
     stmt = (
         select(Workout)
-        .options(selectinload(Workout.exercises))
         .order_by(Workout.start_time.desc())
     )
 

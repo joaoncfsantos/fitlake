@@ -15,38 +15,7 @@ from api.dependencies import DbSession
 from db import crud
 
 router = APIRouter()
-
-
-# Pydantic schemas for API responses
-class WorkoutSetResponse(BaseModel):
-    """Set data within an exercise."""
-
-    id: int
-    set_order: int
-    set_type: str
-    weight_kg: Optional[float] = None
-    reps: Optional[int] = None
-    distance_meters: Optional[float] = None
-    duration_seconds: Optional[int] = None
-    rpe: Optional[float] = None
-
-    class Config:
-        from_attributes = True
-
-
-class WorkoutExerciseResponse(BaseModel):
-    """Exercise data within a workout."""
-
-    id: int
-    exercise_template_id: Optional[str] = None
-    title: str
-    notes: Optional[str] = None
-    exercise_order: int
-    sets: list[WorkoutSetResponse] = []
-
-    class Config:
-        from_attributes = True
-
+    
 
 class WorkoutResponse(BaseModel):
     """Workout data returned by the API."""
@@ -59,7 +28,7 @@ class WorkoutResponse(BaseModel):
     start_time: datetime
     end_time: datetime
     duration_seconds: int
-    exercises: list[WorkoutExerciseResponse] = []
+    exercises: list[dict] = []
     created_at: datetime
     updated_at: datetime
 
