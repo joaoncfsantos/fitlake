@@ -19,7 +19,7 @@ def sync_hevy(_api_key: RequireAPIKey):
     """
     Sync Hevy data to the database.
     """
-    workouts = hevy.fetch_all_workouts()
+    workouts = hevy.fetch_all_workouts(hevy.get_api_key())
     count = sync_hevy_workouts(workouts)
     return {"message": "Hevy sync completed", "synced": count}
 
@@ -28,7 +28,7 @@ def sync_hevy_templates(_api_key: RequireAPIKey):
     """
     Sync Hevy exercise templates to the database.
     """
-    templates = hevy.fetch_all_exercise_templates()
+    templates = hevy.fetch_all_exercise_templates(hevy.get_api_key())
     count = sync_hevy_exercise_templates(templates)
     return {"message": "Hevy exercise templates sync completed", "synced": count}
 
@@ -37,7 +37,7 @@ def sync_strava(_api_key: RequireAPIKey):
     """
     Sync Strava data to the database.
     """
-    activities = strava.fetch_all_activities()
+    activities = strava.fetch_all_activities(strava.get_access_token())
     count = sync_strava_activities(activities)
     return {"message": "Strava sync completed", "synced": count}
 
@@ -46,6 +46,6 @@ def sync_garmin(_api_key: RequireAPIKey):
     """
     Sync Garmin data to the database.
     """
-    activities = garmin.fetch_all_activities()
+    activities = garmin.fetch_all_activities(garmin.get_client())
     count = sync_garmin_activities(activities)
     return {"message": "Garmin sync completed", "synced": count}
