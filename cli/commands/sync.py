@@ -5,7 +5,6 @@ These commands sync data from external APIs to the SQLite database.
 They use the shared core services and do NOT import FastAPI.
 """
 
-from db.database import get_db_session, init_db
 from core.services import sync_service
 
 
@@ -19,12 +18,9 @@ def sync_strava_to_db(activities: list[dict]) -> int:
     Returns:
         Number of activities synced
     """
-    init_db()  # Ensure tables exist
-
-    with get_db_session() as db:
-        count = sync_service.sync_strava_activities(db, activities)
-        print(f"  Synced {count} activities to database")
-        return count
+    count = sync_service.sync_strava_activities(activities)
+    print(f"  Synced {count} activities to database")
+    return count
 
 
 def sync_garmin_to_db(activities: list[dict]) -> int:
@@ -37,12 +33,9 @@ def sync_garmin_to_db(activities: list[dict]) -> int:
     Returns:
         Number of activities synced
     """
-    init_db()  # Ensure tables exist
-
-    with get_db_session() as db:
-        count = sync_service.sync_garmin_activities(db, activities)
-        print(f"  Synced {count} activities to database")
-        return count
+    count = sync_service.sync_garmin_activities(activities)
+    print(f"  Synced {count} activities to database")
+    return count
 
 
 def sync_hevy_to_db(workouts: list[dict]) -> int:
@@ -55,12 +48,9 @@ def sync_hevy_to_db(workouts: list[dict]) -> int:
     Returns:
         Number of workouts synced
     """
-    init_db()  # Ensure tables exist
-
-    with get_db_session() as db:
-        count = sync_service.sync_hevy_workouts(db, workouts)
-        print(f"  Synced {count} workouts to database")
-        return count
+    count = sync_service.sync_hevy_workouts(workouts)
+    print(f"  Synced {count} workouts to database")
+    return count
 
 
 def sync_hevy_templates_to_db(templates: list[dict]) -> int:
@@ -73,9 +63,6 @@ def sync_hevy_templates_to_db(templates: list[dict]) -> int:
     Returns:
         Number of templates synced
     """
-    init_db()  # Ensure tables exist
-
-    with get_db_session() as db:
-        count = sync_service.sync_hevy_exercise_templates(db, templates)
-        print(f"  Synced {count} exercise templates to database")
-        return count
+    count = sync_service.sync_hevy_exercise_templates(templates)
+    print(f"  Synced {count} exercise templates to database")
+    return count

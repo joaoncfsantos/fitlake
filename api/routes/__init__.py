@@ -2,6 +2,6 @@
 API route modules.
 """
 
-from . import activities, workouts
+from . import activities, workouts, sync
 
-__all__ = ["activities", "workouts"]
+__all__ = ["activities", "workouts", "sync"]

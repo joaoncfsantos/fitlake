@@ -14,7 +14,7 @@ from fastapi import FastAPI
 
 from db import init_db
 
-from .routes import activities, workouts
+from .routes import activities, workouts, sync
 
 
 @asynccontextmanager
@@ -41,6 +41,7 @@ app = FastAPI(
 # Include routers
 app.include_router(activities.router, prefix="/api/v1", tags=["activities"])
 app.include_router(workouts.router, prefix="/api/v1", tags=["workouts"])
+app.include_router(sync.router, prefix="/api/v1", tags=["sync"])
 
 
 @app.get("/", tags=["health"])
