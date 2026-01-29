@@ -11,6 +11,7 @@ Or:
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from dotenv import load_dotenv
 
 from db import init_db
 
@@ -36,6 +37,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+load_dotenv()
 
 
 # Include routers

@@ -13,6 +13,7 @@ from .auth import (
 
 # API client
 from .client import (
+    fetch_all_daily_stats,
     fetch_daily_stats,
     fetch_daily_stats_range,
     fetch_sleep_data,
@@ -56,6 +57,7 @@ __all__ = [
     "clear_tokens",
     "print_auth_instructions",
     # Client
+    "fetch_all_daily_stats",
     "fetch_daily_stats",
     "fetch_daily_stats_range",
     "fetch_sleep_data",

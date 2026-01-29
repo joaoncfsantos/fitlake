@@ -8,7 +8,28 @@ from typing import Any
 
 from garminconnect import Garmin
 
-from .auth import get_client
+
+def get_user_start_date(client: Garmin) -> date:
+    """Get the date of the user's oldest activity."""
+    # Fetch oldest activity using ascending sort from a very old date
+    activities = client.get_activities_by_date(
+        startdate="2000-01-01",
+        sortorder="asc"
+    )
+    
+    if activities:
+        oldest = activities[0]
+        start_str = oldest.get("startTimeLocal", "")[:10]
+        return date.fromisoformat(start_str)
+    
+    # Fallback if no activities
+    return date.today()
+
+
+def fetch_all_daily_stats(client: Garmin) -> list[dict[str, Any]]:
+    """Fetch all daily stats from user's first activity to today."""
+    start_date = get_user_start_date(client)
+    return fetch_daily_stats_range(client, start_date, date.today())
 
 
 def fetch_daily_stats(client: Garmin, target_date: date) -> dict[str, Any]:

@@ -7,7 +7,7 @@ Endpoints for syncing data from external platforms to the database.
 from fastapi import APIRouter
 
 from api.auth import RequireAPIKey
-from core.services.sync_service import sync_garmin_activities, sync_hevy_exercise_templates, sync_hevy_workouts, sync_strava_activities
+from core.services.sync_service import  sync_hevy_exercise_templates, sync_hevy_workouts, sync_strava_activities, sync_garmin_daily_stats
 import platforms.hevy as hevy
 import platforms.strava as strava
 import platforms.garmin as garmin
@@ -44,8 +44,9 @@ def sync_strava(_api_key: RequireAPIKey):
 @router.post("/sync/garmin")
 def sync_garmin(_api_key: RequireAPIKey):
     """
-    Sync Garmin data to the database.
+    Sync Garmin daily stats to the database.
     """
-    activities = garmin.fetch_all_activities(garmin.get_client())
-    count = sync_garmin_activities(activities)
+    client = garmin.get_client()
+    daily_stats = garmin.fetch_all_daily_stats(client)
+    count = sync_garmin_daily_stats(daily_stats)
     return {"message": "Garmin sync completed", "synced": count}

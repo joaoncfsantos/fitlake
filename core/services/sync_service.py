@@ -6,8 +6,10 @@ to the database. Used by both CLI and API.
 """
 
 from db.crud import upsert_activity, upsert_exercise_template, upsert_workout
+from db.crud.daily_stats import upsert_daily_stat
 from db.models import Activity, ExerciseTemplate, Workout
 from db.database import get_db_session, init_db
+from db.models.daily_stats import DailyStats
 
 
 def sync_strava_activities(activities_data: list[dict]) -> int:
@@ -30,22 +32,22 @@ def sync_strava_activities(activities_data: list[dict]) -> int:
     return count
 
 
-def sync_garmin_activities(activities_data: list[dict]) -> int:
+def sync_garmin_daily_stats(daily_stats_data: list[dict]) -> int:
     """
-    Sync Garmin activities to the database.
+    Sync Garmin daily stats to the database.
 
     Args:
-        activities_data: List of activity dicts from Garmin API
+        daily_stats_data: List of daily stats dicts from Garmin API
 
     Returns:
-        Number of activities synced
+        Number of daily stats synced
     """
     init_db()
     with get_db_session() as db:
         count = 0
-        for data in activities_data:
-            activity = Activity.from_garmin(data)
-            upsert_activity(db, activity)
+        for data in daily_stats_data:
+            daily_stat = DailyStats.from_garmin(data)
+            upsert_daily_stat(db, daily_stat)
             count += 1
     return count
 
