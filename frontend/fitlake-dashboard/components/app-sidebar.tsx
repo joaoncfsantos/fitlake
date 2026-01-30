@@ -1,4 +1,8 @@
+"use client"
+
 import * as React from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 import { SearchForm } from "@/components/search-form"
 import {
@@ -14,81 +18,89 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
+
+
 const data = {
   navMain: [
     {
-      title: "Getting Started",
-      url: "#",
+      title: "Overview",
       items: [
         {
-          title: "Installation",
-          url: "#",
-        },
-        {
-          title: "Project Structure",
-          url: "#",
+          title: "Overview",
+          url: "/overview",
         },
       ],
     },
     {
-      title: "Building Your Application",
-      url: "#",
+      title: "Health",
       items: [
         {
-          title: "Routing",
-          url: "#",
+          title: "All",
+          url: "/health/all",
         },
         {
-          title: "Data Fetching",
-          url: "#",
-          isActive: true,
+          title: "Body Battery",
+          url: "/health/body-battery",
         },
         {
-          title: "Rendering",
-          url: "#",
+          title: "Heart Rate",
+          url: "/health/heart-rate",
         },
         {
-          title: "Caching",
-          url: "#",
+          title: "Sleep",
+          url: "/health/sleep",
         },
         {
-          title: "Styling",
-          url: "#",
+          title: "Steps",
+          url: "/health/steps",
         },
         {
-          title: "Optimizing",
-          url: "#",
+          title: "Stress",
+          url: "/health/stress",
         },
         {
-          title: "Configuring",
-          url: "#",
-        },
-        {
-          title: "Testing",
-          url: "#",
-        },
-        {
-          title: "Authentication",
-          url: "#",
-        },
-        {
-          title: "Deploying",
-          url: "#",
-        },
-        {
-          title: "Upgrading",
-          url: "#",
-        },
-        {
-          title: "Examples",
-          url: "#",
+          title: "Training Readiness",
+          url: "/health/training-readiness",
         },
       ],
     },
+    {
+      title: "Running",
+      items: [
+        {
+          title: "All",
+          url: "/running/all",
+        },
+      ],
+    },
+    {
+      title: "Workouts",
+      items: [
+        {
+          title: "All",
+          url: "/workouts/all",
+        },
+        {
+          title: "Muscle Distribution",
+          url: "/workouts/muscle-distribution",
+        },
+        {
+          title: "Set Count Per Muscle Group",
+          url: "/workouts/set-count-per-muscle-group",
+        },
+        {
+          title: "Training Load",
+          url: "/workouts/training-load",
+        },
+      ],
+    },
+    
   ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = usePathname()
+  
   return (
     <Sidebar {...props}>
       <SidebarHeader>
@@ -101,10 +113,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarGroupLabel>{item.title}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {item.items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={item.isActive}>
-                      <a href={item.url}>{item.title}</a>
+                {item.items.map((subItem) => (
+                  <SidebarMenuItem key={subItem.title}>
+                    <SidebarMenuButton asChild isActive={pathname === subItem.url}>
+                      <Link href={subItem.url}>{subItem.title}</Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
