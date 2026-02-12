@@ -6,7 +6,8 @@ import { PageLayout } from "@/components/page-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Area, AreaChart, Line, LineChart, Bar, BarChart } from "recharts"
-import { Battery, Heart, Moon, Footprints, Brain, Zap, ArrowRight } from "lucide-react"
+import { Battery, Heart, Moon, Footprints, Brain, Zap, ArrowRight, RefreshCw } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface DailyStats {
   date: string
@@ -20,24 +21,49 @@ interface DailyStats {
 export default function HealthAllPage() {
   const [data, setData] = useState<DailyStats[]>([])
   const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+
+  const fetchData = async () => {
+    try {
+      const response = await fetch('/api/v1/daily-stats?limit=14', {
+        headers: {
+          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
+        },
+      })
+      const result = await response.json()
+      setData(result.items.reverse())
+    } catch (error) {
+      console.error('Error fetching health data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSync = async () => {
+    setSyncing(true)
+    try {
+      // Sync from Garmin to database
+      const syncResponse = await fetch('/api/v1/sync/garmin', {
+        method: 'POST',
+        headers: {
+          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
+        },
+      })
+      
+      if (!syncResponse.ok) {
+        throw new Error('Sync failed')
+      }
+      
+      // Fetch the updated data from database
+      await fetchData()
+    } catch (error) {
+      console.error('Error syncing Garmin data:', error)
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/api/v1/daily-stats?limit=14', {
-          headers: {
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
-          },
-        })
-        const result = await response.json()
-        setData(result.items.reverse())
-      } catch (error) {
-        console.error('Error fetching health data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchData()
   }, [])
 
@@ -65,6 +91,17 @@ export default function HealthAllPage() {
       <PageLayout 
         title="Health - All Metrics" 
         breadcrumbs={[{ label: "Health", href: "/health/all" }, { label: "All" }]}
+        action={
+          <Button 
+            onClick={handleSync}
+            disabled={syncing}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className={syncing ? "animate-spin" : ""} />
+            {syncing ? "Syncing..." : "Sync"}
+          </Button>
+        }
       >
         <div className="grid auto-rows-min gap-4 md:grid-cols-3">
           {[...Array(6)].map((_, i) => (
@@ -156,6 +193,17 @@ export default function HealthAllPage() {
     <PageLayout 
       title="Health - All Metrics" 
       breadcrumbs={[{ label: "Health", href: "/health/all" }, { label: "All" }]}
+      action={
+        <Button 
+          onClick={handleSync}
+          disabled={syncing}
+          variant="outline"
+          size="sm"
+        >
+          <RefreshCw className={syncing ? "animate-spin" : ""} />
+          {syncing ? "Syncing..." : "Sync"}
+        </Button>
+      }
     >
       <div className="grid auto-rows-min gap-4 md:grid-cols-3">
         <MetricCard

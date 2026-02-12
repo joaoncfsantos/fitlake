@@ -16,6 +16,7 @@ import sys
 from datetime import datetime, date, timedelta
 from dotenv import load_dotenv
 
+from core.services.sync_service import sync_garmin_daily_stats
 import platforms.hevy as hevy
 import platforms.strava as strava
 import platforms.garmin as garmin
@@ -477,6 +478,12 @@ def handle_garmin(args: list[str]):
                         pass
 
                     current_date += timedelta(days=1)
+
+                if all_stats:    
+                    count = sync_garmin_daily_stats(all_stats)    
+                    print(f"  Synced {count} daily stats to database")
+                else:
+                    print("No daily stats found to sync.")
 
                 # Export to CSV
                 if not db_only:
