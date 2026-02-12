@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 from db import init_db
 
-from .routes import activities, workouts, sync
+from .routes import activities, workouts, sync, daily_stats
 
 
 @asynccontextmanager
@@ -45,6 +45,7 @@ load_dotenv()
 app.include_router(activities.router, prefix="/api/v1", tags=["activities"])
 app.include_router(workouts.router, prefix="/api/v1", tags=["workouts"])
 app.include_router(sync.router, prefix="/api/v1", tags=["sync"])
+app.include_router(daily_stats.router, prefix="/api/v1", tags=["daily-stats"])
 
 
 @app.get("/", tags=["health"])
