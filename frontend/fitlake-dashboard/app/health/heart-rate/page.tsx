@@ -53,6 +53,13 @@ export default function HeartRatePage() {
     min: item.min_heart_rate || null,
   }))
 
+  const daysWithData = data.filter(item => 
+    item.resting_heart_rate !== null || 
+    item.max_heart_rate !== null || 
+    item.min_heart_rate !== null
+  ).length
+  const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
+
   if (loading) {
     return (
       <PageLayout 
@@ -116,7 +123,10 @@ export default function HeartRatePage() {
       <Card className="mt-4">
         <CardHeader>
           <CardTitle>Heart Rate History</CardTitle>
-          <CardDescription>Daily heart rate trends over the last 30 days</CardDescription>
+          <CardDescription>
+            Daily heart rate trends over the last 30 days
+            {data.length > 0 && ` • ${daysWithData}/${data.length} days with data (${dataQuality}%)`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer
@@ -163,6 +173,7 @@ export default function HeartRatePage() {
                 stroke="var(--chart-2)"
                 strokeWidth={2}
                 dot={false}
+                connectNulls={false}
               />
               <Line
                 type="monotone"
@@ -170,6 +181,7 @@ export default function HeartRatePage() {
                 stroke="var(--chart-1)"
                 strokeWidth={2}
                 dot={false}
+                connectNulls={false}
               />
               <Line
                 type="monotone"
@@ -177,6 +189,7 @@ export default function HeartRatePage() {
                 stroke="var(--chart-3)"
                 strokeWidth={2}
                 dot={false}
+                connectNulls={false}
               />
             </LineChart>
           </ChartContainer>

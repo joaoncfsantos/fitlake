@@ -55,9 +55,15 @@ export default function StressPage() {
 
   const chartData = data.map(item => ({
     date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    average: item.average_stress_level || 0,
-    max: item.max_stress_level || 0,
+    average: item.average_stress_level,
+    max: item.max_stress_level,
   }))
+
+  const daysWithData = data.filter(item => 
+    item.average_stress_level !== null || 
+    item.max_stress_level !== null
+  ).length
+  const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
 
   const getStressLevel = (stress: number | null) => {
     if (!stress) return 'Unknown'
@@ -130,7 +136,10 @@ export default function StressPage() {
       <Card className="mt-4">
         <CardHeader>
           <CardTitle>Stress Level History</CardTitle>
-          <CardDescription>Daily stress levels over the last 30 days</CardDescription>
+          <CardDescription>
+            Daily stress levels over the last 30 days
+            {data.length > 0 && ` • ${daysWithData}/${data.length} days with data (${dataQuality}%)`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer
@@ -182,6 +191,7 @@ export default function StressPage() {
                 stroke="var(--chart-2)"
                 fillOpacity={1}
                 fill="url(#colorMaxStress)"
+                connectNulls={false}
               />
               <Area
                 type="monotone"
@@ -189,6 +199,7 @@ export default function StressPage() {
                 stroke="var(--chart-1)"
                 fillOpacity={1}
                 fill="url(#colorAvgStress)"
+                connectNulls={false}
               />
             </AreaChart>
           </ChartContainer>

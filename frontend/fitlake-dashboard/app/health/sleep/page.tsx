@@ -85,17 +85,21 @@ export default function SleepPage() {
   const targetSleep = 8 * 3600 // 8 hours in seconds
 
   const chartData = data.map(item => {
-    const hours = item.sleeping_seconds ? item.sleeping_seconds / 3600 : 0
+    const hours = item.sleeping_seconds ? item.sleeping_seconds / 3600 : null
     return {
       date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      sleep: parseFloat(hours.toFixed(1)),
+      sleep: hours !== null ? parseFloat(hours.toFixed(1)) : null,
       sleepSeconds: item.sleeping_seconds || 0,
     }
   })
 
+  const daysWithData = data.filter(item => item.sleeping_seconds !== null).length
+  const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
+
   // Calculate max sleep value and round up to next whole hour
-  const maxSleepValue = chartData.length > 0 
-    ? Math.max(...chartData.map(d => d.sleep))
+  const validSleepValues = chartData.map(d => d.sleep).filter((v): v is number => v !== null)
+  const maxSleepValue = validSleepValues.length > 0 
+    ? Math.max(...validSleepValues)
     : 12
   const yAxisMax = Math.ceil(maxSleepValue)
 
@@ -165,7 +169,10 @@ export default function SleepPage() {
       <Card className="mt-4">
         <CardHeader>
           <CardTitle>Sleep Duration</CardTitle>
-          <CardDescription>Daily sleep hours over the last 30 days</CardDescription>
+          <CardDescription>
+            Daily sleep hours over the last 30 days
+            {data.length > 0 && ` • ${daysWithData}/${data.length} days with data (${dataQuality}%)`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer

@@ -77,14 +77,27 @@ export default function HealthAllPage() {
     return factors > 0 ? Math.round(score) : 0
   }
 
-  const batteryData = data.map(item => ({ value: item.body_battery_highest_value || 0 }))
-  const heartRateData = data.map(item => ({ value: item.resting_heart_rate || 0 }))
-  const sleepData = data.map(item => ({ value: item.sleeping_seconds ? item.sleeping_seconds / 3600 : 0 }))
-  const stepsData = data.map(item => ({ value: item.steps || 0 }))
-  const stressData = data.map(item => ({ value: item.average_stress_level || 0 }))
-  const readinessData = data.map(item => ({ value: calculateReadinessScore(item) }))
+  const batteryData = data.map(item => ({ value: item.body_battery_highest_value }))
+  const heartRateData = data.map(item => ({ value: item.resting_heart_rate }))
+  const sleepData = data.map(item => ({ value: item.sleeping_seconds ? item.sleeping_seconds / 3600 : null }))
+  const stepsData = data.map(item => ({ value: item.steps }))
+  const stressData = data.map(item => ({ value: item.average_stress_level }))
+  const readinessData = data.map(item => {
+    const score = calculateReadinessScore(item)
+    return { value: score > 0 ? score : null }
+  })
 
   const latestData = data.length > 0 ? data[data.length - 1] : null
+
+  // Calculate data quality
+  const daysWithData = data.filter(item => 
+    item.body_battery_highest_value !== null || 
+    item.resting_heart_rate !== null || 
+    item.sleeping_seconds !== null || 
+    item.steps !== null || 
+    item.average_stress_level !== null
+  ).length
+  const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
 
   if (loading) {
     return (
@@ -160,6 +173,7 @@ export default function HealthAllPage() {
                   fill="var(--chart-1)"
                   fillOpacity={0.2}
                   strokeWidth={2}
+                  connectNulls={false}
                 />
               </AreaChart>
             )}
@@ -171,6 +185,7 @@ export default function HealthAllPage() {
                   stroke="var(--chart-1)"
                   strokeWidth={2}
                   dot={false}
+                  connectNulls={false}
                 />
               </LineChart>
             )}
@@ -268,7 +283,10 @@ export default function HealthAllPage() {
       <Card className="mt-4">
         <CardHeader>
           <CardTitle>Health Overview</CardTitle>
-          <CardDescription>14-day snapshot of all health metrics</CardDescription>
+          <CardDescription>
+            14-day snapshot of all health metrics
+            {data.length > 0 && ` • ${daysWithData}/${data.length} days with data (${dataQuality}%)`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

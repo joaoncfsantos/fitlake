@@ -74,14 +74,21 @@ export default function TrainingReadinessPage() {
     return factors > 0 ? Math.round(score) : 0
   }
 
-  const chartData = data.map(item => ({
-    date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    readiness: calculateReadinessScore(item),
-  }))
+  const chartData = data.map(item => {
+    const score = calculateReadinessScore(item)
+    return {
+      date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      readiness: score > 0 ? score : null,
+    }
+  })
 
-  const latestReadiness = chartData.length > 0 ? chartData[chartData.length - 1].readiness : 0
-  const avgReadiness = chartData.length > 0 
-    ? Math.round(chartData.reduce((acc, item) => acc + item.readiness, 0) / chartData.length)
+  const daysWithData = chartData.filter(item => item.readiness !== null).length
+  const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
+
+  const latestReadiness = chartData.length > 0 ? chartData[chartData.length - 1].readiness || 0 : 0
+  const validReadinessScores = chartData.filter(item => item.readiness !== null)
+  const avgReadiness = validReadinessScores.length > 0 
+    ? Math.round(validReadinessScores.reduce((acc, item) => acc + (item.readiness || 0), 0) / validReadinessScores.length)
     : 0
 
   const radialData = [{ value: latestReadiness, fill: 'var(--chart-1)' }]
@@ -188,7 +195,10 @@ export default function TrainingReadinessPage() {
       <Card className="mt-4">
         <CardHeader>
           <CardTitle>Training Readiness Trends</CardTitle>
-          <CardDescription>Daily readiness score over the last 30 days</CardDescription>
+          <CardDescription>
+            Daily readiness score over the last 30 days
+            {data.length > 0 && ` • ${daysWithData}/${data.length} days with data (${dataQuality}%)`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer
@@ -226,6 +236,7 @@ export default function TrainingReadinessPage() {
                 stroke="var(--chart-1)"
                 strokeWidth={2}
                 dot={false}
+                connectNulls={false}
               />
             </LineChart>
           </ChartContainer>

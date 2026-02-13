@@ -40,22 +40,31 @@ export default function BodyBatteryPage() {
 
   const chartData = data.map(item => ({
     date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    highest: item.body_battery_highest_value || 0,
-    lowest: item.body_battery_lowest_value || 0,
-    charged: item.body_battery_charged_value || 0,
-    drained: item.body_battery_drained_value || 0,
+    highest: item.body_battery_highest_value,
+    lowest: item.body_battery_lowest_value,
+    charged: item.body_battery_charged_value,
+    drained: item.body_battery_drained_value,
   }))
 
-  const avgMorningBattery = data.length > 0 
-    ? Math.round(data.reduce((acc, item) => acc + (item.body_battery_highest_value || 0), 0) / data.length)
+  const daysWithData = data.filter(item => 
+    item.body_battery_highest_value !== null || 
+    item.body_battery_lowest_value !== null
+  ).length
+  const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
+
+  const validMorningData = data.filter(item => item.body_battery_highest_value !== null)
+  const avgMorningBattery = validMorningData.length > 0 
+    ? Math.round(validMorningData.reduce((acc, item) => acc + (item.body_battery_highest_value || 0), 0) / validMorningData.length)
     : 0
 
-  const avgDailyDrain = data.length > 0 
-    ? Math.round(data.reduce((acc, item) => acc + (item.body_battery_drained_value || 0), 0) / data.length)
+  const validDrainData = data.filter(item => item.body_battery_drained_value !== null)
+  const avgDailyDrain = validDrainData.length > 0 
+    ? Math.round(validDrainData.reduce((acc, item) => acc + (item.body_battery_drained_value || 0), 0) / validDrainData.length)
     : 0
 
-  const avgCharged = data.length > 0 
-    ? Math.round(data.reduce((acc, item) => acc + (item.body_battery_charged_value || 0), 0) / data.length)
+  const validChargedData = data.filter(item => item.body_battery_charged_value !== null)
+  const avgCharged = validChargedData.length > 0 
+    ? Math.round(validChargedData.reduce((acc, item) => acc + (item.body_battery_charged_value || 0), 0) / validChargedData.length)
     : 0
 
   if (loading) {
@@ -123,7 +132,10 @@ export default function BodyBatteryPage() {
       <Card className="mt-4">
         <CardHeader>
           <CardTitle>Body Battery History</CardTitle>
-          <CardDescription>Daily highest and lowest values over the last 30 days</CardDescription>
+          <CardDescription>
+            Daily highest and lowest values over the last 30 days
+            {data.length > 0 && ` • ${daysWithData}/${data.length} days with data (${dataQuality}%)`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer
@@ -175,6 +187,7 @@ export default function BodyBatteryPage() {
                 stroke="var(--chart-1)"
                 fillOpacity={1}
                 fill="url(#colorHighest)"
+                connectNulls={false}
               />
               <Area
                 type="monotone"
@@ -182,6 +195,7 @@ export default function BodyBatteryPage() {
                 stroke="var(--chart-2)"
                 fillOpacity={1}
                 fill="url(#colorLowest)"
+                connectNulls={false}
               />
             </AreaChart>
           </ChartContainer>

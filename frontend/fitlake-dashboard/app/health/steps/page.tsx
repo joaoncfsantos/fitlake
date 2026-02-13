@@ -48,9 +48,12 @@ export default function StepsPage() {
 
   const chartData = data.map(item => ({
     date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    steps: item.steps || 0,
+    steps: item.steps,
     goal: item.daily_step_goal || 10000,
   }))
+
+  const daysWithData = data.filter(item => item.steps !== null).length
+  const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
 
   const radialData = [{ value: goalProgress, fill: 'var(--chart-1)' }]
 
@@ -151,7 +154,10 @@ export default function StepsPage() {
       <Card className="mt-4">
         <CardHeader>
           <CardTitle>Steps History</CardTitle>
-          <CardDescription>Daily steps over the last 30 days with goal reference line</CardDescription>
+          <CardDescription>
+            Daily steps over the last 30 days with goal reference line
+            {data.length > 0 && ` • ${daysWithData}/${data.length} days with data (${dataQuality}%)`}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer
