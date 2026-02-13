@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { PageLayout } from "@/components/page-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, RadialBarChart, RadialBar, PolarGrid, PolarRadiusAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 
 interface DailyStats {
   date: string
@@ -17,8 +17,6 @@ interface DailyStats {
 export default function BodyBatteryPage() {
   const [data, setData] = useState<DailyStats[]>([])
   const [loading, setLoading] = useState(true)
-  //TODO: Get actual current battery 
-  const [currentBattery, setCurrentBattery] = useState(0)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -30,11 +28,6 @@ export default function BodyBatteryPage() {
         })
         const result = await response.json()
         setData(result.items.reverse())
-        
-        // For now, set current battery to most recent highest value
-        if (result.items.length > 0) {
-          setCurrentBattery(result.items[0].body_battery_highest_value || 0)
-        }
       } catch (error) {
         console.error('Error fetching body battery data:', error)
       } finally {
@@ -53,7 +46,13 @@ export default function BodyBatteryPage() {
     drained: item.body_battery_drained_value || 0,
   }))
 
-  const radialData = [{ name: 'battery', value: currentBattery, fill: 'var(--chart-1)' }]
+  const avgMorningBattery = data.length > 0 
+    ? Math.round(data.reduce((acc, item) => acc + (item.body_battery_highest_value || 0), 0) / data.length)
+    : 0
+
+  const avgDailyDrain = data.length > 0 
+    ? Math.round(data.reduce((acc, item) => acc + (item.body_battery_drained_value || 0), 0) / data.length)
+    : 0
 
   const avgCharged = data.length > 0 
     ? Math.round(data.reduce((acc, item) => acc + (item.body_battery_charged_value || 0), 0) / data.length)
@@ -65,7 +64,8 @@ export default function BodyBatteryPage() {
         title="Body Battery" 
         breadcrumbs={[{ label: "Health", href: "/health/all" }, { label: "Body Battery" }]}
       >
-        <div className="grid auto-rows-min gap-4 md:grid-cols-2">
+        <div className="grid auto-rows-min gap-4 md:grid-cols-3">
+          <div className="bg-muted/50 aspect-video rounded-xl animate-pulse" />
           <div className="bg-muted/50 aspect-video rounded-xl animate-pulse" />
           <div className="bg-muted/50 aspect-video rounded-xl animate-pulse" />
         </div>
@@ -79,50 +79,30 @@ export default function BodyBatteryPage() {
       title="Body Battery" 
       breadcrumbs={[{ label: "Health", href: "/health/all" }, { label: "Body Battery" }]}
     >
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="flex flex-col">
           <CardHeader className="pb-3">
-            <CardTitle>Current Body Battery</CardTitle>
-            <CardDescription>Latest recorded value</CardDescription>
+            <CardTitle>Average Morning Battery</CardTitle>
+            <CardDescription>30-day average starting energy</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 flex items-center justify-center pb-4">
-            <ChartContainer
-              config={{
-                battery: {
-                  label: "Battery",
-                  color: "var(--chart-1)",
-                },
-              }}
-              className="aspect-square max-h-[180px] w-full"
-            >
-              <RadialBarChart
-                data={radialData}
-                startAngle={90}
-                endAngle={90 - (currentBattery / 100) * 360}
-                innerRadius={60}
-                outerRadius={80}
-              >
-                <PolarGrid
-                  gridType="circle"
-                  radialLines={false}
-                  stroke="none"
-                  className="first:fill-muted last:fill-background"
-                  polarRadius={[66, 54]}
-                />
-                <RadialBar dataKey="value" background cornerRadius={10} />
-                <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
-                  <text
-                    x="50%"
-                    y="50%"
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    className="fill-foreground text-4xl font-bold"
-                  >
-                    {currentBattery}
-                  </text>
-                </PolarRadiusAxis>
-              </RadialBarChart>
-            </ChartContainer>
+            <div className="text-center">
+              <div className="text-5xl font-bold text-foreground">{avgMorningBattery}</div>
+              <div className="text-sm text-muted-foreground mt-2">points</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="flex flex-col">
+          <CardHeader className="pb-3">
+            <CardTitle>Average Daily Drain</CardTitle>
+            <CardDescription>30-day average energy expenditure</CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1 flex items-center justify-center pb-4">
+            <div className="text-center">
+              <div className="text-5xl font-bold text-foreground">{avgDailyDrain}</div>
+              <div className="text-sm text-muted-foreground mt-2">points per day</div>
+            </div>
           </CardContent>
         </Card>
 
