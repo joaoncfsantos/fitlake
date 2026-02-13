@@ -53,7 +53,7 @@ def fetch_daily_stats_range(
     client: Garmin, start_date: date, end_date: date
 ) -> list[dict[str, Any]]:
     """
-    Fetch daily stats for a date range.
+    Fetch daily stats for a date range, merging with accurate sleep data.
 
     Args:
         client: Authenticated Garmin client
@@ -61,7 +61,7 @@ def fetch_daily_stats_range(
         end_date: End date (inclusive)
 
     Returns:
-        List of daily stats dicts
+        List of daily stats dicts with accurate sleep data
     """
     all_stats = []
     current_date = start_date
@@ -71,6 +71,21 @@ def fetch_daily_stats_range(
             stats = fetch_daily_stats(client, current_date)
             if stats:
                 stats["date"] = current_date.isoformat()
+                
+                # Fetch detailed sleep data and override sleepingSeconds with more accurate sleepTimeSeconds
+                try:
+                    sleep_data = fetch_sleep_data(client, current_date)
+                    if sleep_data:
+                        daily_sleep = sleep_data.get("dailySleepDTO", {})
+                        sleep_time = daily_sleep.get("sleepTimeSeconds")
+                        
+                        if sleep_time is not None:
+                            # Override with accurate sleep time from dedicated sleep API
+                            stats["sleepingSeconds"] = sleep_time
+                except Exception:
+                    # If sleep data fetch fails, keep the original sleepingSeconds
+                    pass
+                
                 all_stats.append(stats)
         except Exception as e:
             print(f"  Warning: Could not fetch stats for {current_date}: {e}")

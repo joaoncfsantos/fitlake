@@ -464,18 +464,25 @@ def handle_garmin(args: list[str]):
                         stats = garmin.fetch_daily_stats(client, current_date)
                         if stats:
                             stats["date"] = current_date.isoformat()
+                            
+                            # Fetch sleep data and merge accurate sleep time
+                            try:
+                                sleep = garmin.fetch_sleep_data(client, current_date)
+                                if sleep:
+                                    sleep["date"] = current_date.isoformat()
+                                    all_sleep.append(sleep)
+                                    
+                                    # Override sleepingSeconds with more accurate sleepTimeSeconds
+                                    daily_sleep = sleep.get("dailySleepDTO", {})
+                                    sleep_time = daily_sleep.get("sleepTimeSeconds")
+                                    if sleep_time is not None:
+                                        stats["sleepingSeconds"] = sleep_time
+                            except Exception:
+                                pass
+                            
                             all_stats.append(stats)
                     except Exception as e:
                         print(f"    Warning: Could not fetch stats: {e}")
-
-                    # Fetch sleep data
-                    try:
-                        sleep = garmin.fetch_sleep_data(client, current_date)
-                        if sleep:
-                            sleep["date"] = current_date.isoformat()
-                            all_sleep.append(sleep)
-                    except Exception:
-                        pass
 
                     current_date += timedelta(days=1)
 
