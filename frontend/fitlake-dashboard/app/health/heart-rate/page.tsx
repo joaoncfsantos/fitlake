@@ -134,6 +134,7 @@ export default function HeartRatePage() {
                 color: "var(--chart-3)",
               },
             }}
+            className="h-[40vh] w-full"
           >
             <LineChart
               data={chartData}

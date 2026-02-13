@@ -144,6 +144,7 @@ export default function StressPage() {
                 color: "var(--chart-2)",
               },
             }}
+            className="h-[40vh] w-full"
           >
             <AreaChart
               data={chartData}

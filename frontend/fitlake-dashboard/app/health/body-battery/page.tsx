@@ -79,13 +79,13 @@ export default function BodyBatteryPage() {
       title="Body Battery" 
       breadcrumbs={[{ label: "Health", href: "/health/all" }, { label: "Body Battery" }]}
     >
-      <div className="grid auto-rows-min gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="flex flex-col">
+          <CardHeader className="pb-3">
             <CardTitle>Current Body Battery</CardTitle>
             <CardDescription>Latest recorded value</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 flex items-center justify-center pb-4">
             <ChartContainer
               config={{
                 battery: {
@@ -93,21 +93,21 @@ export default function BodyBatteryPage() {
                   color: "var(--chart-1)",
                 },
               }}
-              className="mx-auto aspect-square max-h-[250px]"
+              className="aspect-square max-h-[180px] w-full"
             >
               <RadialBarChart
                 data={radialData}
                 startAngle={90}
                 endAngle={90 - (currentBattery / 100) * 360}
-                innerRadius={80}
-                outerRadius={110}
+                innerRadius={60}
+                outerRadius={80}
               >
                 <PolarGrid
                   gridType="circle"
                   radialLines={false}
                   stroke="none"
                   className="first:fill-muted last:fill-background"
-                  polarRadius={[86, 74]}
+                  polarRadius={[66, 54]}
                 />
                 <RadialBar dataKey="value" background cornerRadius={10} />
                 <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
@@ -126,12 +126,12 @@ export default function BodyBatteryPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="flex flex-col">
+          <CardHeader className="pb-3">
             <CardTitle>Average Charge</CardTitle>
             <CardDescription>30-day average charged per day</CardDescription>
           </CardHeader>
-          <CardContent className="flex items-center justify-center min-h-[250px]">
+          <CardContent className="flex-1 flex items-center justify-center pb-4">
             <div className="text-center">
               <div className="text-5xl font-bold text-foreground">{avgCharged}</div>
               <div className="text-sm text-muted-foreground mt-2">points per day</div>
@@ -157,6 +157,7 @@ export default function BodyBatteryPage() {
                 color: "var(--chart-2)",
               },
             }}
+            className="h-[40vh] w-full"
           >
             <AreaChart
               data={chartData}

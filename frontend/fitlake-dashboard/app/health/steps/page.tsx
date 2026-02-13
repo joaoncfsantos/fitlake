@@ -75,13 +75,13 @@ export default function StepsPage() {
       title="Steps" 
       breadcrumbs={[{ label: "Health", href: "/health/all" }, { label: "Steps" }]}
     >
-      <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="flex flex-col">
           <CardHeader className="pb-2">
             <CardDescription>Today's Steps</CardDescription>
             <CardTitle className="text-4xl">{todaySteps.toLocaleString()}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-4">
             <div className="text-xs text-muted-foreground flex items-center gap-1">
               <Footprints className="h-4 w-4" />
               Latest recorded
@@ -89,24 +89,24 @@ export default function StepsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader className="pb-2">
             <CardDescription>Daily Average</CardDescription>
             <CardTitle className="text-4xl">{avgSteps.toLocaleString()}</CardTitle>
           </CardHeader>
-          <CardContent>
+            <CardContent className="pb-4">
             <div className="text-xs text-muted-foreground">
               30-day average
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="flex flex-col">
+          <CardHeader className="pb-3">
             <CardTitle>Goal Progress</CardTitle>
             <CardDescription>{stepGoal.toLocaleString()} steps goal</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 flex items-center justify-center pb-4">
             <ChartContainer
               config={{
                 progress: {
@@ -114,7 +114,7 @@ export default function StepsPage() {
                   color: "var(--chart-1)",
                 },
               }}
-              className="mx-auto aspect-square max-h-[200px]"
+              className="aspect-square max-h-[180px] w-full"
             >
               <RadialBarChart
                 data={radialData}
@@ -161,6 +161,7 @@ export default function StepsPage() {
                 color: "var(--chart-1)",
               },
             }}
+            className="h-[40vh] w-full"
           >
             <BarChart
               data={chartData}

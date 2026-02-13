@@ -4,12 +4,40 @@ import { useEffect, useState } from "react"
 import { PageLayout } from "@/components/page-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts"
 import { Moon } from "lucide-react"
 
 interface DailyStats {
   date: string
   sleeping_seconds: number | null
+}
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const seconds = payload[0].payload.sleepSeconds
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    return (
+      <div className="rounded-lg border bg-background p-2 shadow-sm">
+        <div className="flex flex-col gap-1">
+          <span className="text-[0.70rem] uppercase text-muted-foreground">
+            {label}
+          </span>
+          <div className="flex items-center gap-2">
+            <div 
+              className="h-2.5 w-2.5 shrink-0 rounded-[2px]" 
+              style={{ backgroundColor: 'var(--chart-1)' }}
+            />
+            <span className="text-xs font-medium text-muted-foreground">Sleep</span>
+            <span className="ml-auto font-bold">
+              {hours}h {minutes}m
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  return null
 }
 
 export default function SleepPage() {
@@ -43,6 +71,12 @@ export default function SleepPage() {
     return `${hours}h ${minutes}m`
   }
 
+  const formatDecimalHours = (decimalHours: number) => {
+    const hours = Math.floor(decimalHours)
+    const minutes = Math.round((decimalHours - hours) * 60)
+    return `${hours}h${minutes}`
+  }
+
   const latestSleep = data.length > 0 ? data[data.length - 1].sleeping_seconds : null
   const avgSleep = data.length > 0 
     ? Math.round(data.reduce((acc, item) => acc + (item.sleeping_seconds || 0), 0) / data.filter(item => item.sleeping_seconds).length)
@@ -55,8 +89,18 @@ export default function SleepPage() {
     return {
       date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       sleep: parseFloat(hours.toFixed(1)),
+      sleepSeconds: item.sleeping_seconds || 0,
     }
   })
+
+  // Calculate max sleep value and round up to next whole hour
+  const maxSleepValue = chartData.length > 0 
+    ? Math.max(...chartData.map(d => d.sleep))
+    : 12
+  const yAxisMax = Math.ceil(maxSleepValue)
+
+  // Calculate average in hours for the reference line
+  const avgSleepHours = avgSleep / 3600
 
   if (loading) {
     return (
@@ -127,10 +171,11 @@ export default function SleepPage() {
           <ChartContainer
             config={{
               sleep: {
-                label: "Sleep (hours)",
+                label: "Sleep",
                 color: "var(--chart-1)",
               },
             }}
+            className="h-[40vh] w-full"
           >
             <BarChart
               data={chartData}
@@ -148,10 +193,21 @@ export default function SleepPage() {
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                domain={[0, 12]}
+                domain={[0, yAxisMax]}
                 className="text-xs"
               />
-              <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartTooltip content={<CustomTooltip />} />
+              <ReferenceLine 
+                y={avgSleepHours} 
+                stroke="var(--chart-2)" 
+                strokeDasharray="3 3"
+                label={{ 
+                  value: `Avg: ${formatDecimalHours(avgSleepHours)}`, 
+                  position: 'left',
+                  fill: 'var(--chart-2)',
+                  fontSize: 12
+                }}
+              />
               <Bar
                 dataKey="sleep"
                 fill="var(--chart-1)"

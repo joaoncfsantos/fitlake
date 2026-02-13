@@ -115,13 +115,13 @@ export default function TrainingReadinessPage() {
       title="Training Readiness" 
       breadcrumbs={[{ label: "Health", href: "/health/all" }, { label: "Training Readiness" }]}
     >
-      <div className="grid auto-rows-min gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="flex flex-col">
+          <CardHeader className="pb-3">
             <CardTitle>Readiness Score</CardTitle>
             <CardDescription>Composite score based on sleep, stress, and recovery</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 flex items-center justify-center pb-4">
             <ChartContainer
               config={{
                 readiness: {
@@ -129,21 +129,21 @@ export default function TrainingReadinessPage() {
                   color: "var(--chart-1)",
                 },
               }}
-              className="mx-auto aspect-square max-h-[250px]"
+              className="aspect-square max-h-[180px] w-full"
             >
               <RadialBarChart
                 data={radialData}
                 startAngle={90}
                 endAngle={90 - (latestReadiness / 100) * 360}
-                innerRadius={80}
-                outerRadius={110}
+                innerRadius={60}
+                outerRadius={80}
               >
                 <PolarGrid
                   gridType="circle"
                   radialLines={false}
                   stroke="none"
                   className="first:fill-muted last:fill-background"
-                  polarRadius={[86, 74]}
+                  polarRadius={[66, 54]}
                 />
                 <RadialBar dataKey="value" background cornerRadius={10} />
                 <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
@@ -162,12 +162,12 @@ export default function TrainingReadinessPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
+        <Card className="flex flex-col">
+          <CardHeader className="pb-3">
             <CardTitle>Recovery Status</CardTitle>
             <CardDescription>Current training readiness assessment</CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center min-h-[250px]">
+          <CardContent className="flex-1 flex flex-col items-center justify-center pb-4">
             <div className="text-center">
               <Zap className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <div className={`text-3xl font-bold ${recovery.color}`}>{recovery.status}</div>
@@ -198,6 +198,7 @@ export default function TrainingReadinessPage() {
                 color: "var(--chart-1)",
               },
             }}
+            className="h-[40vh] w-full"
           >
             <LineChart
               data={chartData}
