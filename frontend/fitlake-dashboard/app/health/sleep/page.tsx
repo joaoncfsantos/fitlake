@@ -7,16 +7,26 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts"
 import { Moon } from "lucide-react"
 
-interface DailyStats {
+interface SleepData {
   date: string
-  sleeping_seconds: number | null
+  sleepTimeSeconds: number | null
+  deepSleepSeconds: number | null
+  lightSleepSeconds: number | null
+  remSleepSeconds: number | null
+  awakeSleepSeconds: number | null
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
-    const seconds = payload[0].payload.sleepSeconds
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
+    const data = payload[0].payload
+    const formatTime = (seconds: number) => {
+      const hours = Math.floor(seconds / 3600)
+      const minutes = Math.floor((seconds % 3600) / 60)
+      return `${hours}h ${minutes}m`
+    }
+    
+    const totalSeconds = (data.deepSeconds || 0) + (data.lightSeconds || 0) + (data.remSeconds || 0)
+    
     return (
       <div className="rounded-lg border bg-background p-2 shadow-sm">
         <div className="flex flex-col gap-1">
@@ -26,11 +36,37 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           <div className="flex items-center gap-2">
             <div 
               className="h-2.5 w-2.5 shrink-0 rounded-[2px]" 
+              style={{ backgroundColor: 'var(--chart-3)' }}
+            />
+            <span className="text-xs font-medium text-muted-foreground">Deep</span>
+            <span className="ml-auto font-bold">
+              {formatTime(data.deepSeconds || 0)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div 
+              className="h-2.5 w-2.5 shrink-0 rounded-[2px]" 
+              style={{ backgroundColor: 'var(--chart-2)' }}
+            />
+            <span className="text-xs font-medium text-muted-foreground">Light</span>
+            <span className="ml-auto font-bold">
+              {formatTime(data.lightSeconds || 0)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div 
+              className="h-2.5 w-2.5 shrink-0 rounded-[2px]" 
               style={{ backgroundColor: 'var(--chart-1)' }}
             />
-            <span className="text-xs font-medium text-muted-foreground">Sleep</span>
+            <span className="text-xs font-medium text-muted-foreground">REM</span>
             <span className="ml-auto font-bold">
-              {hours}h {minutes}m
+              {formatTime(data.remSeconds || 0)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 pt-1 border-t mt-1">
+            <span className="text-xs font-medium text-muted-foreground">Total</span>
+            <span className="ml-auto font-bold">
+              {formatTime(totalSeconds)}
             </span>
           </div>
         </div>
@@ -41,13 +77,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export default function SleepPage() {
-  const [data, setData] = useState<DailyStats[]>([])
+  const [data, setData] = useState<SleepData[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/v1/daily-stats?limit=30', {
+        const response = await fetch('/api/v1/sleep?limit=30', {
           headers: {
             'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
           },
@@ -77,27 +113,37 @@ export default function SleepPage() {
     return `${hours}h${minutes}`
   }
 
-  const latestSleep = data.length > 0 ? data[data.length - 1].sleeping_seconds : null
+  const latestSleep = data.length > 0 ? data[data.length - 1].sleepTimeSeconds : null
   const avgSleep = data.length > 0 
-    ? Math.round(data.reduce((acc, item) => acc + (item.sleeping_seconds || 0), 0) / data.filter(item => item.sleeping_seconds).length)
+    ? Math.round(data.reduce((acc, item) => acc + (item.sleepTimeSeconds || 0), 0) / data.filter(item => item.sleepTimeSeconds).length)
     : 0
 
   const targetSleep = 8 * 3600 // 8 hours in seconds
 
   const chartData = data.map(item => {
-    const hours = item.sleeping_seconds ? item.sleeping_seconds / 3600 : null
+    const deep = item.deepSleepSeconds ? item.deepSleepSeconds / 3600 : null
+    const light = item.lightSleepSeconds ? item.lightSleepSeconds / 3600 : null
+    const rem = item.remSleepSeconds ? item.remSleepSeconds / 3600 : null
+    
     return {
       date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      sleep: hours !== null ? parseFloat(hours.toFixed(1)) : null,
-      sleepSeconds: item.sleeping_seconds || 0,
+      deep: deep !== null ? parseFloat(deep.toFixed(1)) : null,
+      light: light !== null ? parseFloat(light.toFixed(1)) : null,
+      rem: rem !== null ? parseFloat(rem.toFixed(1)) : null,
+      deepSeconds: item.deepSleepSeconds || 0,
+      lightSeconds: item.lightSleepSeconds || 0,
+      remSeconds: item.remSleepSeconds || 0,
     }
   })
 
-  const daysWithData = data.filter(item => item.sleeping_seconds !== null).length
+  const daysWithData = data.filter(item => item.sleepTimeSeconds !== null).length
   const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
 
   // Calculate max sleep value and round up to next whole hour
-  const validSleepValues = chartData.map(d => d.sleep).filter((v): v is number => v !== null)
+  const validSleepValues = chartData.map(d => {
+    const total = (d.deep || 0) + (d.light || 0) + (d.rem || 0)
+    return total > 0 ? total : null
+  }).filter((v): v is number => v !== null)
   const maxSleepValue = validSleepValues.length > 0 
     ? Math.max(...validSleepValues)
     : 12
@@ -177,8 +223,16 @@ export default function SleepPage() {
         <CardContent>
           <ChartContainer
             config={{
-              sleep: {
-                label: "Sleep",
+              deep: {
+                label: "Deep Sleep",
+                color: "var(--chart-3)",
+              },
+              light: {
+                label: "Light Sleep",
+                color: "var(--chart-2)",
+              },
+              rem: {
+                label: "REM Sleep",
                 color: "var(--chart-1)",
               },
             }}
@@ -206,17 +260,30 @@ export default function SleepPage() {
               <ChartTooltip content={<CustomTooltip />} />
               <ReferenceLine 
                 y={avgSleepHours} 
-                stroke="var(--chart-2)" 
+                stroke="hsl(var(--muted-foreground))" 
                 strokeDasharray="3 3"
                 label={{ 
                   value: `Avg: ${formatDecimalHours(avgSleepHours)}`, 
                   position: 'left',
-                  fill: 'var(--chart-2)',
+                  fill: 'hsl(var(--muted-foreground))',
                   fontSize: 12
                 }}
               />
               <Bar
-                dataKey="sleep"
+                dataKey="deep"
+                stackId="sleep"
+                fill="var(--chart-3)"
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="light"
+                stackId="sleep"
+                fill="var(--chart-2)"
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="rem"
+                stackId="sleep"
                 fill="var(--chart-1)"
                 radius={[4, 4, 0, 0]}
               />

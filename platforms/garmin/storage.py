@@ -348,6 +348,71 @@ def load_activities_from_csv(filename: str | None = None) -> list[dict[str, Any]
     return activities
 
 
+def get_latest_sleep_csv() -> str:
+    """
+    Find the most recent garmin_sleep CSV file in data/exports.
+
+    Returns:
+        Path to the most recent CSV file
+
+    Raises:
+        FileNotFoundError: If no sleep CSV files exist
+    """
+    pattern = "data/exports/garmin_sleep_*.csv"
+    files = glob.glob(pattern)
+
+    if not files:
+        raise FileNotFoundError(
+            "No Garmin sleep data found. Run 'python cli.py garmin sync' first."
+        )
+
+    return sorted(files)[-1]
+
+
+def load_sleep_from_csv(filename: str | None = None) -> list[dict[str, Any]]:
+    """
+    Load sleep data from a CSV file.
+
+    Args:
+        filename: Path to CSV file. If None, uses the most recent export.
+
+    Returns:
+        List of sleep data dicts
+    """
+    if filename is None:
+        filename = get_latest_sleep_csv()
+
+    sleep_data = []
+    with open(filename, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            # Convert numeric fields
+            for field in [
+                "sleepTimeSeconds",
+                "napTimeSeconds",
+                "deepSleepSeconds",
+                "lightSleepSeconds",
+                "remSleepSeconds",
+                "awakeSleepSeconds",
+                "sleepStartTimestampLocal",
+                "sleepEndTimestampLocal",
+                "averageSpO2Value",
+                "lowestSpO2Value",
+                "averageRespirationValue",
+                "lowestRespirationValue",
+                "highestRespirationValue",
+                "avgHeartRate",
+            ]:
+                if row.get(field):
+                    try:
+                        row[field] = float(row[field])
+                    except ValueError:
+                        pass
+            sleep_data.append(row)
+
+    return sleep_data
+
+
 def get_stats_since(days: int) -> list[dict[str, Any]]:
     """
     Get daily stats from the past N days from locally synced data.
