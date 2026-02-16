@@ -63,6 +63,16 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               {formatTime(data.remSeconds || 0)}
             </span>
           </div>
+          <div className="flex items-center gap-2">
+          <div 
+            className="h-2.5 w-2.5 shrink-0 rounded-[2px]" 
+            style={{ backgroundColor: '#ec4899' }}
+          />
+            <span className="text-xs font-medium text-muted-foreground">Awake</span>
+            <span className="ml-auto font-bold">
+              {formatTime(data.awakeSeconds || 0)}
+            </span>
+          </div>
           <div className="flex items-center gap-2 pt-1 border-t mt-1">
             <span className="text-xs font-medium text-muted-foreground">Total</span>
             <span className="ml-auto font-bold">
@@ -113,9 +123,15 @@ export default function SleepPage() {
     return `${hours}h${minutes}`
   }
 
-  const latestSleep = data.length > 0 ? data[data.length - 1].sleeping_seconds : null
-  const avgSleep = data.length > 0 
-    ? Math.round(data.reduce((acc, item) => acc + (item.sleeping_seconds || 0), 0) / data.filter(item => item.sleeping_seconds).length)
+  // Calculate actual sleep (excluding awake time)
+  const calculateActualSleep = (item: SleepData): number => {
+    return (item.deep_sleep_seconds || 0) + (item.light_sleep_seconds || 0) + (item.rem_sleep_seconds || 0)
+  }
+
+  const latestSleep = data.length > 0 ? calculateActualSleep(data[data.length - 1]) : null
+  const daysWithSleepData = data.filter(item => calculateActualSleep(item) > 0)
+  const avgSleep = daysWithSleepData.length > 0 
+    ? Math.round(daysWithSleepData.reduce((acc, item) => acc + calculateActualSleep(item), 0) / daysWithSleepData.length)
     : 0
 
   const targetSleep = 8 * 3600 // 8 hours in seconds
@@ -124,24 +140,27 @@ export default function SleepPage() {
     const deep = item.deep_sleep_seconds ? item.deep_sleep_seconds / 3600 : null
     const light = item.light_sleep_seconds ? item.light_sleep_seconds / 3600 : null
     const rem = item.rem_sleep_seconds ? item.rem_sleep_seconds / 3600 : null
-    
+    const awake = item.awake_sleep_seconds ? item.awake_sleep_seconds / 3600 : null
+
     return {
       date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       deep: deep !== null ? parseFloat(deep.toFixed(1)) : null,
       light: light !== null ? parseFloat(light.toFixed(1)) : null,
       rem: rem !== null ? parseFloat(rem.toFixed(1)) : null,
+      awake: awake !== null ? parseFloat(awake.toFixed(1)) : null,
       deepSeconds: item.deep_sleep_seconds || 0,
       lightSeconds: item.light_sleep_seconds || 0,
       remSeconds: item.rem_sleep_seconds || 0,
+      awakeSeconds: item.awake_sleep_seconds || 0,
     }
   })
 
-  const daysWithData = data.filter(item => item.sleeping_seconds !== null).length
+  const daysWithData = daysWithSleepData.length
   const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
 
   // Calculate max sleep value and round up to next whole hour
   const validSleepValues = chartData.map(d => {
-    const total = (d.deep || 0) + (d.light || 0) + (d.rem || 0)
+    const total = (d.deep || 0) + (d.light || 0) + (d.rem || 0) + (d.awake || 0)
     return total > 0 ? total : null
   }).filter((v): v is number => v !== null)
   const maxSleepValue = validSleepValues.length > 0 
@@ -149,7 +168,7 @@ export default function SleepPage() {
     : 12
   const yAxisMax = Math.ceil(maxSleepValue)
 
-  // Calculate average in hours for the reference line
+  // Calculate average in hours for the reference line (matches the card average)
   const avgSleepHours = avgSleep / 3600
 
   if (loading) {
@@ -235,6 +254,10 @@ export default function SleepPage() {
                 label: "REM Sleep",
                 color: "var(--chart-1)",
               },
+              awake: {
+                label: "Awake",
+                color: "#ec4899", //change to pinkish color
+              },
             }}
             className="h-[40vh] w-full"
           >
@@ -260,12 +283,12 @@ export default function SleepPage() {
               <ChartTooltip content={<CustomTooltip />} />
               <ReferenceLine 
                 y={avgSleepHours} 
-                stroke="hsl(var(--muted-foreground))" 
+                stroke="#94a3b8" 
                 strokeDasharray="3 3"
                 label={{ 
                   value: `Avg: ${formatDecimalHours(avgSleepHours)}`, 
                   position: 'left',
-                  fill: 'hsl(var(--muted-foreground))',
+                  fill: "#94a3b8",
                   fontSize: 12
                 }}
               />
@@ -285,7 +308,13 @@ export default function SleepPage() {
                 dataKey="rem"
                 stackId="sleep"
                 fill="var(--chart-1)"
-                radius={[4, 4, 0, 0]}
+                radius={[0, 0, 0, 0]}
+              />
+              <Bar
+                dataKey="awake"
+                stackId="sleep"
+                fill="#ec4899"
+                radius={[0, 0, 0, 0]}
               />
             </BarChart>
           </ChartContainer>
