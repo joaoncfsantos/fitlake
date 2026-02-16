@@ -61,7 +61,7 @@ def fetch_daily_stats_range(
         end_date: End date (inclusive)
 
     Returns:
-        List of daily stats dicts with accurate sleep data
+.        List of daily stats dicts with accurate sleep data and sleep breakdown
     """
     all_stats = []
     current_date = start_date
@@ -72,7 +72,7 @@ def fetch_daily_stats_range(
             if stats:
                 stats["date"] = current_date.isoformat()
                 
-                # Fetch detailed sleep data and override sleepingSeconds with more accurate sleepTimeSeconds
+                # Fetch detailed sleep data and merge sleep breakdown
                 try:
                     sleep_data = fetch_sleep_data(client, current_date)
                     if sleep_data:
@@ -82,6 +82,12 @@ def fetch_daily_stats_range(
                         if sleep_time is not None:
                             # Override with accurate sleep time from dedicated sleep API
                             stats["sleepingSeconds"] = sleep_time
+                        
+                        # Add sleep breakdown data
+                        stats["deepSleepSeconds"] = daily_sleep.get("deepSleepSeconds")
+                        stats["lightSleepSeconds"] = daily_sleep.get("lightSleepSeconds")
+                        stats["remSleepSeconds"] = daily_sleep.get("remSleepSeconds")
+                        stats["awakeSleepSeconds"] = daily_sleep.get("awakeSleepSeconds")
                 except Exception:
                     # If sleep data fetch fails, keep the original sleepingSeconds
                     pass

@@ -9,11 +9,11 @@ import { Moon } from "lucide-react"
 
 interface SleepData {
   date: string
-  sleepTimeSeconds: number | null
-  deepSleepSeconds: number | null
-  lightSleepSeconds: number | null
-  remSleepSeconds: number | null
-  awakeSleepSeconds: number | null
+  sleeping_seconds: number | null
+  deep_sleep_seconds: number | null
+  light_sleep_seconds: number | null
+  rem_sleep_seconds: number | null
+  awake_sleep_seconds: number | null
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -83,7 +83,7 @@ export default function SleepPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/v1/sleep?limit=30', {
+        const response = await fetch('/api/v1/daily-stats?limit=30', {
           headers: {
             'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
           },
@@ -113,30 +113,30 @@ export default function SleepPage() {
     return `${hours}h${minutes}`
   }
 
-  const latestSleep = data.length > 0 ? data[data.length - 1].sleepTimeSeconds : null
+  const latestSleep = data.length > 0 ? data[data.length - 1].sleeping_seconds : null
   const avgSleep = data.length > 0 
-    ? Math.round(data.reduce((acc, item) => acc + (item.sleepTimeSeconds || 0), 0) / data.filter(item => item.sleepTimeSeconds).length)
+    ? Math.round(data.reduce((acc, item) => acc + (item.sleeping_seconds || 0), 0) / data.filter(item => item.sleeping_seconds).length)
     : 0
 
   const targetSleep = 8 * 3600 // 8 hours in seconds
 
   const chartData = data.map(item => {
-    const deep = item.deepSleepSeconds ? item.deepSleepSeconds / 3600 : null
-    const light = item.lightSleepSeconds ? item.lightSleepSeconds / 3600 : null
-    const rem = item.remSleepSeconds ? item.remSleepSeconds / 3600 : null
+    const deep = item.deep_sleep_seconds ? item.deep_sleep_seconds / 3600 : null
+    const light = item.light_sleep_seconds ? item.light_sleep_seconds / 3600 : null
+    const rem = item.rem_sleep_seconds ? item.rem_sleep_seconds / 3600 : null
     
     return {
       date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       deep: deep !== null ? parseFloat(deep.toFixed(1)) : null,
       light: light !== null ? parseFloat(light.toFixed(1)) : null,
       rem: rem !== null ? parseFloat(rem.toFixed(1)) : null,
-      deepSeconds: item.deepSleepSeconds || 0,
-      lightSeconds: item.lightSleepSeconds || 0,
-      remSeconds: item.remSleepSeconds || 0,
+      deepSeconds: item.deep_sleep_seconds || 0,
+      lightSeconds: item.light_sleep_seconds || 0,
+      remSeconds: item.rem_sleep_seconds || 0,
     }
   })
 
-  const daysWithData = data.filter(item => item.sleepTimeSeconds !== null).length
+  const daysWithData = data.filter(item => item.sleeping_seconds !== null).length
   const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
 
   // Calculate max sleep value and round up to next whole hour

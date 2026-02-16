@@ -49,6 +49,10 @@ class DailyStatsResponse(BaseModel):
     vigorous_intensity_minutes: Optional[int] = None
     intensity_minutes_goal: Optional[int] = None
     sleeping_seconds: Optional[int] = None
+    deep_sleep_seconds: Optional[int] = None
+    light_sleep_seconds: Optional[int] = None
+    rem_sleep_seconds: Optional[int] = None
+    awake_sleep_seconds: Optional[int] = None
     body_battery_charged_value: Optional[float] = None
     body_battery_drained_value: Optional[float] = None
     body_battery_highest_value: Optional[float] = None

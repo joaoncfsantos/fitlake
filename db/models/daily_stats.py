@@ -43,6 +43,10 @@ class DailyStats(Base):
     vigorous_intensity_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     intensity_minutes_goal: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     sleeping_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    deep_sleep_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    light_sleep_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    rem_sleep_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    awake_sleep_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     body_battery_charged_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     body_battery_drained_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     body_battery_highest_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
@@ -83,6 +87,10 @@ class DailyStats(Base):
             vigorous_intensity_minutes=data.get("vigorousIntensityMinutes"),
             intensity_minutes_goal=data.get("intensityMinutesGoal"),
             sleeping_seconds=data.get("sleepingSeconds"),
+            deep_sleep_seconds=data.get("deepSleepSeconds"),
+            light_sleep_seconds=data.get("lightSleepSeconds"),
+            rem_sleep_seconds=data.get("remSleepSeconds"),
+            awake_sleep_seconds=data.get("awakeSleepSeconds"),
             body_battery_charged_value=data.get("bodyBatteryChargedValue"),
             body_battery_drained_value=data.get("bodyBatteryDrainedValue"),
             body_battery_highest_value=data.get("bodyBatteryHighestValue"),
