@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
 import { PageLayout } from "@/components/page-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,6 +8,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Area, AreaChart, Line, LineChart, Bar, BarChart } from "recharts"
 import { Battery, Heart, Moon, Footprints, Brain, Zap, ArrowRight, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useDailyStats } from "@/hooks/useDailyStats"
 
 interface DailyStats {
   date: string
@@ -19,25 +20,8 @@ interface DailyStats {
 }
 
 export default function HealthAllPage() {
-  const [data, setData] = useState<DailyStats[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, loading, error, refetch } = useDailyStats(14)
   const [syncing, setSyncing] = useState(false)
-
-  const fetchData = async () => {
-    try {
-      const response = await fetch('/api/v1/daily-stats?limit=14', {
-        headers: {
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
-        },
-      })
-      const result = await response.json()
-      setData(result.items.reverse())
-    } catch (error) {
-      console.error('Error fetching health data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleSync = async () => {
     setSyncing(true)
@@ -54,18 +38,14 @@ export default function HealthAllPage() {
         throw new Error('Sync failed')
       }
       
-      // Fetch the updated data from database
-      await fetchData()
+      // Refetch the updated data from database
+      await refetch()
     } catch (error) {
       console.error('Error syncing Garmin data:', error)
     } finally {
       setSyncing(false)
     }
   }
-
-  useEffect(() => {
-    fetchData()
-  }, [])
 
   const calculateReadinessScore = (item: DailyStats): number => {
     let score = 0
@@ -77,12 +57,12 @@ export default function HealthAllPage() {
     return factors > 0 ? Math.round(score) : 0
   }
 
-  const batteryData = data.map(item => ({ value: item.body_battery_highest_value }))
-  const heartRateData = data.map(item => ({ value: item.resting_heart_rate }))
-  const sleepData = data.map(item => ({ value: item.sleeping_seconds ? item.sleeping_seconds / 3600 : null }))
-  const stepsData = data.map(item => ({ value: item.steps }))
-  const stressData = data.map(item => ({ value: item.average_stress_level }))
-  const readinessData = data.map(item => {
+  const batteryData = data.map((item: DailyStats) => ({ value: item.body_battery_highest_value }))
+  const heartRateData = data.map((item: DailyStats) => ({ value: item.resting_heart_rate }))
+  const sleepData = data.map((item: DailyStats) => ({ value: item.sleeping_seconds ? item.sleeping_seconds / 3600 : null }))
+  const stepsData = data.map((item: DailyStats) => ({ value: item.steps }))
+  const stressData = data.map((item: DailyStats) => ({ value: item.average_stress_level }))
+  const readinessData = data.map((item: DailyStats) => {
     const score = calculateReadinessScore(item)
     return { value: score > 0 ? score : null }
   })
@@ -90,7 +70,7 @@ export default function HealthAllPage() {
   const latestData = data.length > 0 ? data[data.length - 1] : null
 
   // Calculate data quality
-  const daysWithData = data.filter(item => 
+  const daysWithData = data.filter((item: DailyStats) => 
     item.body_battery_highest_value !== null || 
     item.resting_heart_rate !== null || 
     item.sleeping_seconds !== null || 

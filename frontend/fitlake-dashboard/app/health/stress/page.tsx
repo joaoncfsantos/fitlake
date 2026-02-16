@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { PageLayout } from "@/components/page-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { Brain } from "lucide-react"
+import { useDailyStats } from "@/hooks/useDailyStats"
 
 interface DailyStats {
   date: string
@@ -15,28 +15,7 @@ interface DailyStats {
 }
 
 export default function StressPage() {
-  const [data, setData] = useState<DailyStats[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/api/v1/daily-stats?limit=30', {
-          headers: {
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
-          },
-        })
-        const result = await response.json()
-        setData(result.items.reverse())
-      } catch (error) {
-        console.error('Error fetching stress data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
+  const { data, loading, error } = useDailyStats(30)
 
   const formatDuration = (seconds: number | null) => {
     if (!seconds) return '--'
@@ -47,19 +26,19 @@ export default function StressPage() {
 
   const latestData = data.length > 0 ? data[data.length - 1] : null
   const avgStress = data.length > 0 
-    ? Math.round(data.reduce((acc, item) => acc + (item.average_stress_level || 0), 0) / data.filter(item => item.average_stress_level).length)
+    ? Math.round(data.reduce((acc: number, item: DailyStats) => acc + (item.average_stress_level || 0), 0) / data.filter((item: DailyStats) => item.average_stress_level).length)
     : 0
   const avgRestTime = data.length > 0 
-    ? Math.round(data.reduce((acc, item) => acc + (item.rest_stress_duration || 0), 0) / data.filter(item => item.rest_stress_duration).length)
+    ? Math.round(data.reduce((acc: number, item: DailyStats) => acc + (item.rest_stress_duration || 0), 0) / data.filter((item: DailyStats) => item.rest_stress_duration).length)
     : 0
 
-  const chartData = data.map(item => ({
+  const chartData = data.map((item: DailyStats) => ({
     date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     average: item.average_stress_level,
     max: item.max_stress_level,
   }))
 
-  const daysWithData = data.filter(item => 
+  const daysWithData = data.filter((item: DailyStats) => 
     item.average_stress_level !== null || 
     item.max_stress_level !== null
   ).length

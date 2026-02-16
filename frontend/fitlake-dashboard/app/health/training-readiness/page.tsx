@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { PageLayout } from "@/components/page-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, RadialBarChart, RadialBar, PolarGrid, PolarRadiusAxis } from "recharts"
 import { Zap } from "lucide-react"
+import { useDailyStats } from "@/hooks/useDailyStats"
 
 interface DailyStats {
   date: string
@@ -16,28 +16,7 @@ interface DailyStats {
 }
 
 export default function TrainingReadinessPage() {
-  const [data, setData] = useState<DailyStats[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/api/v1/daily-stats?limit=30', {
-          headers: {
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
-          },
-        })
-        const result = await response.json()
-        setData(result.items.reverse())
-      } catch (error) {
-        console.error('Error fetching training readiness data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
+  const { data, loading, error } = useDailyStats(30)
 
   // Calculate training readiness score based on multiple factors
   const calculateReadinessScore = (item: DailyStats): number => {
@@ -74,7 +53,7 @@ export default function TrainingReadinessPage() {
     return factors > 0 ? Math.round(score) : 0
   }
 
-  const chartData = data.map(item => {
+  const chartData = data.map((item: DailyStats) => {
     const score = calculateReadinessScore(item)
     return {
       date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -82,13 +61,13 @@ export default function TrainingReadinessPage() {
     }
   })
 
-  const daysWithData = chartData.filter(item => item.readiness !== null).length
+  const daysWithData = chartData.filter((item: any) => item.readiness !== null).length
   const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
 
   const latestReadiness = chartData.length > 0 ? chartData[chartData.length - 1].readiness || 0 : 0
-  const validReadinessScores = chartData.filter(item => item.readiness !== null)
+  const validReadinessScores = chartData.filter((item: any) => item.readiness !== null)
   const avgReadiness = validReadinessScores.length > 0 
-    ? Math.round(validReadinessScores.reduce((acc, item) => acc + (item.readiness || 0), 0) / validReadinessScores.length)
+    ? Math.round(validReadinessScores.reduce((acc: number, item: any) => acc + (item.readiness || 0), 0) / validReadinessScores.length)
     : 0
 
   const radialData = [{ value: latestReadiness, fill: 'var(--chart-1)' }]

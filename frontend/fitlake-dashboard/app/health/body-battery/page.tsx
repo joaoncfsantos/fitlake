@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { PageLayout } from "@/components/page-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { useDailyStats } from "@/hooks/useDailyStats"
 
 interface DailyStats {
   date: string
@@ -15,30 +15,9 @@ interface DailyStats {
 }
 
 export default function BodyBatteryPage() {
-  const [data, setData] = useState<DailyStats[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data, loading, error } = useDailyStats(30)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/api/v1/daily-stats?limit=30', {
-          headers: {
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
-          },
-        })
-        const result = await response.json()
-        setData(result.items.reverse())
-      } catch (error) {
-        console.error('Error fetching body battery data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
-
-  const chartData = data.map(item => ({
+  const chartData = data.map((item: DailyStats) => ({
     date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     highest: item.body_battery_highest_value,
     lowest: item.body_battery_lowest_value,
@@ -46,25 +25,25 @@ export default function BodyBatteryPage() {
     drained: item.body_battery_drained_value,
   }))
 
-  const daysWithData = data.filter(item => 
+  const daysWithData = data.filter((item: DailyStats) => 
     item.body_battery_highest_value !== null || 
     item.body_battery_lowest_value !== null
   ).length
   const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
 
-  const validMorningData = data.filter(item => item.body_battery_highest_value !== null)
+  const validMorningData = data.filter((item: DailyStats) => item.body_battery_highest_value !== null)
   const avgMorningBattery = validMorningData.length > 0 
-    ? Math.round(validMorningData.reduce((acc, item) => acc + (item.body_battery_highest_value || 0), 0) / validMorningData.length)
+    ? Math.round(validMorningData.reduce((acc: number, item: DailyStats) => acc + (item.body_battery_highest_value || 0), 0) / validMorningData.length)
     : 0
 
-  const validDrainData = data.filter(item => item.body_battery_drained_value !== null)
+  const validDrainData = data.filter((item: DailyStats) => item.body_battery_drained_value !== null)
   const avgDailyDrain = validDrainData.length > 0 
-    ? Math.round(validDrainData.reduce((acc, item) => acc + (item.body_battery_drained_value || 0), 0) / validDrainData.length)
+    ? Math.round(validDrainData.reduce((acc: number, item: DailyStats) => acc + (item.body_battery_drained_value || 0), 0) / validDrainData.length)
     : 0
 
-  const validChargedData = data.filter(item => item.body_battery_charged_value !== null)
+  const validChargedData = data.filter((item: DailyStats) => item.body_battery_charged_value !== null)
   const avgCharged = validChargedData.length > 0 
-    ? Math.round(validChargedData.reduce((acc, item) => acc + (item.body_battery_charged_value || 0), 0) / validChargedData.length)
+    ? Math.round(validChargedData.reduce((acc: number, item: DailyStats) => acc + (item.body_battery_charged_value || 0), 0) / validChargedData.length)
     : 0
 
   if (loading) {

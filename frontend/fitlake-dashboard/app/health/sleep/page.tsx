@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { PageLayout } from "@/components/page-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts"
 import { Moon } from "lucide-react"
+import { useDailyStats } from "@/hooks/useDailyStats"
 
 interface SleepData {
   date: string
@@ -87,28 +87,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export default function SleepPage() {
-  const [data, setData] = useState<SleepData[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/api/v1/daily-stats?limit=30', {
-          headers: {
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
-          },
-        })
-        const result = await response.json()
-        setData(result.items.reverse())
-      } catch (error) {
-        console.error('Error fetching sleep data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
+  const { data, loading, error } = useDailyStats(30)
 
   const formatHours = (seconds: number | null) => {
     if (!seconds) return '--'
@@ -129,14 +108,14 @@ export default function SleepPage() {
   }
 
   const latestSleep = data.length > 0 ? calculateActualSleep(data[data.length - 1]) : null
-  const daysWithSleepData = data.filter(item => calculateActualSleep(item) > 0)
+  const daysWithSleepData = data.filter((item: SleepData) => calculateActualSleep(item) > 0)
   const avgSleep = daysWithSleepData.length > 0 
-    ? Math.round(daysWithSleepData.reduce((acc, item) => acc + calculateActualSleep(item), 0) / daysWithSleepData.length)
+    ? Math.round(daysWithSleepData.reduce((acc: number, item: SleepData) => acc + calculateActualSleep(item), 0) / daysWithSleepData.length)
     : 0
 
   const targetSleep = 8 * 3600 // 8 hours in seconds
 
-  const chartData = data.map(item => {
+  const chartData = data.map((item: SleepData) => {
     const deep = item.deep_sleep_seconds ? item.deep_sleep_seconds / 3600 : null
     const light = item.light_sleep_seconds ? item.light_sleep_seconds / 3600 : null
     const rem = item.rem_sleep_seconds ? item.rem_sleep_seconds / 3600 : null
@@ -159,10 +138,10 @@ export default function SleepPage() {
   const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
 
   // Calculate max sleep value and round up to next whole hour
-  const validSleepValues = chartData.map(d => {
+  const validSleepValues = chartData.map((d: any) => {
     const total = (d.deep || 0) + (d.light || 0) + (d.rem || 0) + (d.awake || 0)
     return total > 0 ? total : null
-  }).filter((v): v is number => v !== null)
+  }).filter((v: any ): v is number => v !== null)
   const maxSleepValue = validSleepValues.length > 0 
     ? Math.max(...validSleepValues)
     : 12

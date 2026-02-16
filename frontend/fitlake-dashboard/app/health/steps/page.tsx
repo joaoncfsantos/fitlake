@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { PageLayout } from "@/components/page-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, RadialBarChart, RadialBar, PolarGrid, PolarRadiusAxis, ReferenceLine } from "recharts"
 import { Footprints } from "lucide-react"
+import { useDailyStats } from "@/hooks/useDailyStats"
 
 interface DailyStats {
   date: string
@@ -14,28 +14,7 @@ interface DailyStats {
 }
 
 export default function StepsPage() {
-  const [data, setData] = useState<DailyStats[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/api/v1/daily-stats?limit=30', {
-          headers: {
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
-          },
-        })
-        const result = await response.json()
-        setData(result.items.reverse())
-      } catch (error) {
-        console.error('Error fetching steps data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
+  const { data, loading, error } = useDailyStats(30)
 
   const latestData = data.length > 0 ? data[data.length - 1] : null
   const todaySteps = latestData?.steps || 0
@@ -43,16 +22,16 @@ export default function StepsPage() {
   const goalProgress = Math.round((todaySteps / stepGoal) * 100)
 
   const avgSteps = data.length > 0 
-    ? Math.round(data.reduce((acc, item) => acc + (item.steps || 0), 0) / data.filter(item => item.steps).length)
+    ? Math.round(data.reduce((acc: number, item: DailyStats) => acc + (item.steps || 0), 0) / data.filter((item: DailyStats) => item.steps).length)
     : 0
 
-  const chartData = data.map(item => ({
+  const chartData = data.map((item: DailyStats) => ({
     date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     steps: item.steps,
     goal: item.daily_step_goal || 10000,
   }))
 
-  const daysWithData = data.filter(item => item.steps !== null).length
+  const daysWithData = data.filter((item: DailyStats) => item.steps !== null).length
   const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
 
   const radialData = [{ value: goalProgress, fill: 'var(--chart-1)' }]

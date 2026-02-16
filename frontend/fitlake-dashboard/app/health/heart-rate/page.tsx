@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { PageLayout } from "@/components/page-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart"
 import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { Activity } from "lucide-react"
+import { useDailyStats } from "@/hooks/useDailyStats"
 
 interface DailyStats {
   date: string
@@ -15,45 +15,24 @@ interface DailyStats {
 }
 
 export default function HeartRatePage() {
-  const [data, setData] = useState<DailyStats[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/api/v1/daily-stats?limit=30', {
-          headers: {
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
-          },
-        })
-        const result = await response.json()
-        setData(result.items.reverse())
-      } catch (error) {
-        console.error('Error fetching heart rate data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
+  const { data, loading, error } = useDailyStats(30)
 
   const latestData = data.length > 0 ? data[data.length - 1] : null
   const avgRestingHR = data.length > 0 
-    ? Math.round(data.reduce((acc, item) => acc + (item.resting_heart_rate || 0), 0) / data.filter(item => item.resting_heart_rate).length)
+    ? Math.round(data.reduce((acc: number, item: DailyStats) => acc + (item.resting_heart_rate || 0), 0) / data.filter((item: DailyStats) => item.resting_heart_rate).length)
     : 0
   const avgMaxHR = data.length > 0 
-    ? Math.round(data.reduce((acc, item) => acc + (item.max_heart_rate || 0), 0) / data.filter(item => item.max_heart_rate).length)
+    ? Math.round(data.reduce((acc: number, item: DailyStats) => acc + (item.max_heart_rate || 0), 0) / data.filter((item: DailyStats) => item.max_heart_rate).length)
     : 0
 
-  const chartData = data.map(item => ({
+  const chartData = data.map((item: DailyStats) => ({
     date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
     resting: item.resting_heart_rate || null,
     max: item.max_heart_rate || null,
     min: item.min_heart_rate || null,
   }))
 
-  const daysWithData = data.filter(item => 
+  const daysWithData = data.filter((item: DailyStats) => 
     item.resting_heart_rate !== null || 
     item.max_heart_rate !== null || 
     item.min_heart_rate !== null
