@@ -17,11 +17,21 @@ router = APIRouter()
 @router.post("/sync/hevy")
 def sync_hevy(_api_key: RequireAPIKey):
     """
-    Sync Hevy data to the database.
+    Sync Hevy data (exercise templates + workouts) to the database.
     """
+    # Sync templates first
+    templates = hevy.fetch_all_exercise_templates(hevy.get_api_key())
+    templates_count = sync_hevy_exercise_templates(templates)
+    
+    # Then sync workouts
     workouts = hevy.fetch_all_workouts(hevy.get_api_key())
-    count = sync_hevy_workouts(workouts)
-    return {"message": "Hevy sync completed", "synced": count}
+    workouts_count = sync_hevy_workouts(workouts)
+    
+    return {
+        "message": "Hevy sync completed", 
+        "synced_templates": templates_count,
+        "synced_workouts": workouts_count
+    }
 
 @router.post("/sync/hevy/templates")
 def sync_hevy_templates(_api_key: RequireAPIKey):
