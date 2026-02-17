@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import * as React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
-import { SearchForm } from "@/components/search-form"
+import { SearchForm } from "@/components/search-form";
 import {
   Sidebar,
   SidebarContent,
@@ -16,13 +16,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-} from "@/components/ui/sidebar"
-
-
+} from "@/components/ui/sidebar";
 
 const data = {
   navMain: [
-    {
+    /* {
       title: "Overview",
       items: [
         {
@@ -30,7 +28,7 @@ const data = {
           url: "/overview",
         },
       ],
-    },
+    }, */
     {
       title: "Health",
       items: [
@@ -84,28 +82,29 @@ const data = {
           title: "Muscle Distribution",
           url: "/workouts/muscle-distribution",
         },
-        {
+        /* {
           title: "Set Count Per Muscle Group",
           url: "/workouts/set-count-per-muscle-group",
-        },
-        {
+        }, */
+        /*  {
           title: "Training Load",
           url: "/workouts/training-load",
-        },
+        }, */
       ],
     },
-    
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const pathname = usePathname()
-  
+  const pathname = usePathname();
+
   return (
     <Sidebar {...props}>
       <SidebarHeader>
-        <p className="text-xl font-bold px-2">Fitlake Dashboard</p>
-        <SearchForm />
+        <p className="text-xl font-bold px-2 cursor-pointer">
+          Fitlake Dashboard
+        </p>
+        {/*  <SearchForm /> */}
       </SidebarHeader>
       <SidebarContent>
         {data.navMain.map((item) => (
@@ -115,7 +114,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenu>
                 {item.items.map((subItem) => (
                   <SidebarMenuItem key={subItem.title}>
-                    <SidebarMenuButton asChild isActive={pathname === subItem.url}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === subItem.url}
+                    >
                       <Link href={subItem.url}>{subItem.title}</Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -127,5 +129,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }
