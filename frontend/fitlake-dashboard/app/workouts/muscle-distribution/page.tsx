@@ -4,28 +4,54 @@ import { PageLayout } from "@/components/page-layout";
 import { useMuscleDistribution } from "@/hooks/useMuscleDistribution";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, Legend } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Pie,
+  PieChart,
+  Sector,
+} from "recharts";
 import { Dumbbell, Target, TrendingUp } from "lucide-react";
+import { useState } from "react";
 
-// Color palette for muscle groups
-const COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "#8b5cf6",
-  "#ec4899",
-  "#f59e0b",
-  "#10b981",
-  "#06b6d4",
-  "#6366f1",
-  "#f43f5e",
-];
+const CustomPieShape = (props: any) => {
+  const {
+    cx,
+    cy,
+    innerRadius = 0,
+    outerRadius,
+    startAngle,
+    endAngle,
+    isActive,
+  } = props;
+
+  return (
+    <Sector
+      cx={cx}
+      cy={cy}
+      innerRadius={innerRadius}
+      outerRadius={isActive ? outerRadius + 5 : outerRadius}
+      startAngle={startAngle}
+      endAngle={endAngle}
+      fill={isActive ? "var(--chart-2)" : "var(--chart-3)"}
+      stroke={"white"}
+      strokeWidth={isActive ? 1 : 0}
+    />
+  );
+};
 
 export default function MuscleDistributionPage() {
   const { data, loading, error } = useMuscleDistribution();
+
+  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
 
   if (loading) {
     return (
@@ -173,7 +199,7 @@ export default function MuscleDistributionPage() {
             <CardTitle>Muscle Group Volume</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={chartConfig}>
+            <ChartContainer config={chartConfig} className="mt-6">
               <BarChart data={barChartData}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis
@@ -181,22 +207,22 @@ export default function MuscleDistributionPage() {
                   angle={-45}
                   textAnchor="end"
                   height={100}
-                  className="text-xs"
-                  tick={{ fill: "hsl(var(--muted-foreground))" }}
+                  className="text-xs text-left"
+                  dx={-15}
+                  dy={15}
                 />
                 <YAxis
                   className="text-xs"
-                  tick={{ fill: "hsl(var(--muted-foreground))" }}
                   label={{
                     value: "Weighted Sets",
                     angle: -90,
                     position: "insideLeft",
-                    style: { fill: "hsl(var(--muted-foreground))" },
                   }}
                 />
                 <ChartTooltip
                   content={({ active, payload }) => {
-                    if (!active || !payload || payload.length === 0) return null;
+                    if (!active || !payload || payload.length === 0)
+                      return null;
                     const data = payload[0].payload;
                     return (
                       <div className="rounded-lg border bg-background p-2 shadow-sm">
@@ -217,8 +243,8 @@ export default function MuscleDistributionPage() {
                 />
                 <Bar
                   dataKey="weightedSets"
-                  fill="hsl(var(--chart-1))"
-                  radius={[4, 4, 0, 0]}
+                  fill="var(--chart-2)"
+                  radius={[0, 0, 0, 0]}
                 />
               </BarChart>
             </ChartContainer>
@@ -239,22 +265,25 @@ export default function MuscleDistributionPage() {
                   cy="50%"
                   labelLine={false}
                   label={(entry: any) =>
-                    entry.percentage > 5 ? `${entry.name} ${entry.percentage.toFixed(0)}%` : ""
+                    entry.percentage > 5
+                      ? `${entry.name} ${entry.percentage.toFixed(0)}%`
+                      : ""
                   }
                   outerRadius={80}
-                  fill="#8884d8"
                   dataKey="value"
-                >
-                  {pieChartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
+                  shape={(props: any) => (
+                    <CustomPieShape
+                      {...props}
+                      isActive={props.index === activeIndex}
                     />
-                  ))}
-                </Pie>
+                  )}
+                  onMouseEnter={(_, index) => setActiveIndex(index)}
+                  onMouseLeave={() => setActiveIndex(undefined)}
+                />
                 <ChartTooltip
                   content={({ active, payload }) => {
-                    if (!active || !payload || payload.length === 0) return null;
+                    if (!active || !payload || payload.length === 0)
+                      return null;
                     const data = payload[0].payload;
                     return (
                       <div className="rounded-lg border bg-background p-2 shadow-sm">
@@ -298,15 +327,15 @@ export default function MuscleDistributionPage() {
                   <th className="text-right py-2 px-4 font-medium">
                     Total Sets
                   </th>
-                  <th className="text-right py-2 px-4 font-medium">
-                    Percentage
-                  </th>
+                  <th className="text-right py-2 px-4 font-medium">%</th>
                 </tr>
               </thead>
               <tbody>
                 {data.muscle_distribution.map((item, index) => (
                   <tr key={index} className="border-b hover:bg-muted/50">
-                    <td className="py-2 px-4 capitalize">{item.muscle_group}</td>
+                    <td className="py-2 px-4 capitalize">
+                      {item.muscle_group}
+                    </td>
                     <td className="text-right py-2 px-4">
                       {item.weighted_sets.toFixed(1)}
                     </td>
@@ -329,12 +358,12 @@ export default function MuscleDistributionPage() {
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
           <p>
-            Muscle distribution is calculated using weighted sets. Primary muscle
-            groups receive a weight of {data.primary_muscle_weight.toFixed(1)},
-            while secondary muscle groups receive a weight of{" "}
-            {data.secondary_muscle_weight.toFixed(1)}. This provides a more
-            accurate representation of which muscles are being trained most
-            heavily.
+            Muscle distribution is calculated using weighted sets. Primary
+            muscle groups receive a weight of{" "}
+            {data.primary_muscle_weight.toFixed(1)}, while secondary muscle
+            groups receive a weight of {data.secondary_muscle_weight.toFixed(1)}
+            . This provides a more accurate representation of which muscles are
+            being trained most heavily.
           </p>
         </CardContent>
       </Card>
