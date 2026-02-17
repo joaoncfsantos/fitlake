@@ -4,6 +4,8 @@ Workout endpoints.
 Read-only endpoints for querying workouts from the database.
 """
 
+import json
+from collections import defaultdict
 from datetime import datetime
 from typing import Optional
 
@@ -61,6 +63,25 @@ class WorkoutListResponse(BaseModel):
     limit: int
 
 
+class MuscleDistributionItem(BaseModel):
+    """Muscle group distribution data."""
+
+    muscle_group: str
+    weighted_sets: float
+    percentage: float
+    total_sets: int
+
+
+class MuscleDistributionResponse(BaseModel):
+    """Muscle distribution analytics."""
+
+    muscle_distribution: list[MuscleDistributionItem]
+    total_sets: int
+    total_workouts: int
+    primary_muscle_weight: float = 1.0
+    secondary_muscle_weight: float = 0.5
+
+
 @router.get("/workouts", response_model=WorkoutListResponse)
 def list_workouts(
     db: DbSession,
@@ -105,6 +126,111 @@ def list_workouts(
         total=len(summaries),
         skip=skip,
         limit=limit,
+    )
+
+
+@router.get("/workouts/muscle-distribution", response_model=MuscleDistributionResponse)
+def get_muscle_distribution(
+    db: DbSession,
+    _api_key: RequireAPIKey,
+    platform: Optional[str] = Query(None, description="Filter by platform (hevy)"),
+    since: Optional[datetime] = Query(None, description="Filter workouts after this date"),
+    until: Optional[datetime] = Query(None, description="Filter workouts before this date"),
+    limit: int = Query(1000, ge=1, le=10000, description="Maximum number of workouts to analyze"),
+):
+    """
+    Get muscle group distribution analytics across all workouts.
+
+    Calculates weighted muscle group engagement where:
+    - Primary muscles get weight 1.0
+    - Secondary muscles get weight 0.5
+
+    Returns aggregated statistics showing which muscle groups are trained most.
+    """
+    # Fetch workouts with exercises
+    workouts = crud.get_workouts(
+        db,
+        platform=platform,
+        since=since,
+        until=until,
+        skip=0,
+        limit=limit,
+    )
+
+    # Fetch all exercise templates to map exercises to muscle groups
+    exercise_templates = crud.get_exercise_templates(db, platform=platform, limit=10000)
+    
+    # Create lookup dict for templates
+    templates_dict = {}
+    for template in exercise_templates:
+        templates_dict[template.external_id] = {
+            "primary_muscle_group": template.primary_muscle_group,
+            "secondary_muscle_groups": (
+                json.loads(template.secondary_muscle_groups)
+                if template.secondary_muscle_groups
+                else []
+            ),
+        }
+
+    # Calculate muscle distribution
+    PRIMARY_MUSCLE_WEIGHT = 1.0
+    SECONDARY_MUSCLE_WEIGHT = 0.5
+    
+    muscle_totals: defaultdict[str, dict] = defaultdict(
+        lambda: {"weighted_sets": 0.0, "total_sets": 0}
+    )
+    total_sets = 0
+
+    for workout in workouts:
+        exercises = workout.exercises
+        
+        for exercise in exercises:
+            exercise_template_id = exercise.get("exercise_template_id")
+            sets = exercise.get("sets", [])
+            num_sets = len(sets)
+            total_sets += num_sets
+
+            if exercise_template_id not in templates_dict:
+                continue
+
+            template = templates_dict[exercise_template_id]
+            primary_muscle = template.get("primary_muscle_group")
+            secondary_muscles = template.get("secondary_muscle_groups", [])
+
+            if primary_muscle:
+                muscle_totals[primary_muscle]["weighted_sets"] += (
+                    num_sets * PRIMARY_MUSCLE_WEIGHT
+                )
+                muscle_totals[primary_muscle]["total_sets"] += num_sets
+
+            for muscle in secondary_muscles:
+                muscle_totals[muscle]["weighted_sets"] += (
+                    num_sets * SECONDARY_MUSCLE_WEIGHT
+                )
+                # Don't count secondary muscle sets in total_sets to avoid double counting
+
+    # Calculate percentages and create response
+    total_weighted = sum(data["weighted_sets"] for data in muscle_totals.values())
+    
+    muscle_items = [
+        MuscleDistributionItem(
+            muscle_group=muscle,
+            weighted_sets=data["weighted_sets"],
+            percentage=(data["weighted_sets"] / total_weighted * 100) if total_weighted > 0 else 0,
+            total_sets=data["total_sets"],
+        )
+        for muscle, data in muscle_totals.items()
+    ]
+    
+    # Sort by weighted sets descending
+    muscle_items.sort(key=lambda x: x.weighted_sets, reverse=True)
+
+    return MuscleDistributionResponse(
+        muscle_distribution=muscle_items,
+        total_sets=total_sets,
+        total_workouts=len(workouts),
+        primary_muscle_weight=PRIMARY_MUSCLE_WEIGHT,
+        secondary_muscle_weight=SECONDARY_MUSCLE_WEIGHT,
     )
 
 
