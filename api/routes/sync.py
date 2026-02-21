@@ -7,7 +7,9 @@ Endpoints for syncing data from external platforms to the database.
 from fastapi import APIRouter
 
 from api.auth import RequireAPIKey
-from core.services.sync_service import  sync_hevy_exercise_templates, sync_hevy_workouts, sync_strava_activities, sync_garmin_daily_stats
+from core.services.sync_service import sync_hevy_exercise_templates, sync_hevy_workouts, sync_strava_activities, sync_garmin_daily_stats
+from db.crud import get_latest_activity_date
+from db.database import get_db_session
 import platforms.hevy as hevy
 import platforms.strava as strava
 import platforms.garmin as garmin
@@ -43,13 +45,29 @@ def sync_hevy_templates(_api_key: RequireAPIKey):
     return {"message": "Hevy exercise templates sync completed", "synced": count}
 
 @router.post("/sync/strava")
-def sync_strava(_api_key: RequireAPIKey):
+def sync_strava(_api_key: RequireAPIKey, light: bool = False):
     """
     Sync Strava data to the database.
+
+    When `light=true`, only activities newer than the most recently stored
+    activity are fetched (incremental sync). When `light=false` (default),
+    all activities are fetched from Strava.
     """
-    activities = strava.fetch_all_activities(strava.get_access_token())
+    access_token = strava.get_access_token()
+
+    if light:
+        with get_db_session() as db:
+            latest_date = get_latest_activity_date(db, "strava")
+        if latest_date:
+            activities = strava.fetch_activities_since(access_token, latest_date)
+        else:
+            # No data in DB yet — fall back to full sync
+            activities = strava.fetch_all_activities(access_token)
+    else:
+        activities = strava.fetch_all_activities(access_token)
+
     count = sync_strava_activities(activities)
-    return {"message": "Strava sync completed", "synced": count}
+    return {"message": "Strava sync completed", "synced": count, "light": light}
 
 @router.post("/sync/garmin")
 def sync_garmin(_api_key: RequireAPIKey):

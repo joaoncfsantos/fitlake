@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -8,21 +8,23 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
-import {
-  SidebarInset,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
+import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 
 interface PageLayoutProps {
-  title: string
-  breadcrumbs?: { label: string; href?: string }[]
-  children: React.ReactNode
-  action?: React.ReactNode
+  title: string;
+  breadcrumbs?: { label: string; href?: string }[];
+  children: React.ReactNode;
+  action?: React.ReactNode;
 }
 
-export function PageLayout({ title, breadcrumbs = [], children, action }: PageLayoutProps) {
+export function PageLayout({
+  title,
+  breadcrumbs = [],
+  children,
+  action,
+}: PageLayoutProps) {
   return (
     <SidebarInset>
       <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
@@ -34,9 +36,7 @@ export function PageLayout({ title, breadcrumbs = [], children, action }: PageLa
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem className="hidden md:block">
-              <BreadcrumbLink href="/">
-                Fitlake Dashboard
-              </BreadcrumbLink>
+              <BreadcrumbLink href="/">Fitlake Dashboard</BreadcrumbLink>
             </BreadcrumbItem>
             {breadcrumbs.map((crumb, index) => (
               <React.Fragment key={index}>
@@ -63,5 +63,5 @@ export function PageLayout({ title, breadcrumbs = [], children, action }: PageLa
         {children}
       </div>
     </SidebarInset>
-  )
+  );
 }

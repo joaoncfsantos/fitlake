@@ -4,6 +4,7 @@ https://developers.strava.com/docs/reference/
 """
 
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 import requests
@@ -26,7 +27,10 @@ def _get_headers(access_token: str) -> dict[str, str]:
 
 
 def fetch_activities_page(
-    access_token: str, page: int, per_page: int = PAGE_SIZE
+    access_token: str,
+    page: int,
+    per_page: int = PAGE_SIZE,
+    after: int | None = None,
 ) -> list[dict[str, Any]]:
     """
     Fetch a single page of activities from the API.
@@ -40,10 +44,12 @@ def fetch_activities_page(
         List of activity dicts
     """
     headers = _get_headers(access_token)
-    params = {
+    params: dict[str, Any] = {
         "page": page,
         "per_page": per_page,
     }
+    if after is not None:
+        params["after"] = after
 
     response = requests.get(
         f"{API_BASE_URL}/athlete/activities",
@@ -90,6 +96,46 @@ def fetch_all_activities(access_token: str) -> list[dict[str, Any]]:
         time.sleep(0.5)
 
     print(f"  Total activities fetched: {len(all_activities)}")
+    return all_activities
+
+
+def fetch_activities_since(access_token: str, since: datetime) -> list[dict[str, Any]]:
+    """
+    Fetch only activities created after a given datetime (light/incremental sync).
+
+    Uses Strava's `after` filter (Unix timestamp) so only new pages are
+    downloaded rather than the full history.
+
+    Args:
+        access_token: The OAuth2 access token
+        since: Fetch activities strictly after this datetime
+
+    Returns:
+        List of activity dicts newer than `since`
+    """
+
+    after_ts = int(since.replace(tzinfo=timezone.utc).timestamp())
+    all_activities = []
+    page = 1
+
+    print(f"Fetching Strava activities since {since.date()} ...")
+
+    while True:
+        print(f"  Fetching page {page}...")
+        activities = fetch_activities_page(access_token, page, after=after_ts)
+
+        if not activities:
+            break
+
+        all_activities.extend(activities)
+
+        if len(activities) < PAGE_SIZE:
+            break
+
+        page += 1
+        time.sleep(0.5)
+
+    print(f"  Total new activities fetched: {len(all_activities)}")
     return all_activities
 
 

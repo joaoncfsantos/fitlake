@@ -10,6 +10,7 @@ from .activities import (
     get_activities,
     get_activity,
     get_activity_by_external_id,
+    get_latest_activity_date,
     upsert_activity,
 )
 from .exercise_templates import (
@@ -32,6 +33,7 @@ __all__ = [
     "get_activity",
     "get_activity_by_external_id",
     "get_activities",
+    "get_latest_activity_date",
     "upsert_activity",
     "create_exercise_template",
     "get_exercise_template",

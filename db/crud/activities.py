@@ -5,7 +5,7 @@ CRUD operations for Activity model.
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from db.models import Activity
@@ -100,6 +100,23 @@ def get_activities(
 
     stmt = stmt.offset(skip).limit(limit)
     return list(db.execute(stmt).scalars().all())
+
+
+def get_latest_activity_date(db: Session, platform: str) -> Optional[datetime]:
+    """
+    Get the start_date of the most recent activity for a given platform.
+
+    Args:
+        db: Database session
+        platform: Platform name (e.g., "strava")
+
+    Returns:
+        The latest start_date, or None if no activities exist
+    """
+    result = db.execute(
+        select(func.max(Activity.start_date)).where(Activity.platform == platform)
+    ).scalar()
+    return result
 
 
 def upsert_activity(db: Session, activity: Activity) -> Activity:

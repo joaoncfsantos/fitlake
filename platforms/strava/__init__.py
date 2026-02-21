@@ -15,6 +15,7 @@ from .auth import (
 from .client import (
     fetch_activities_page,
     fetch_all_activities,
+    fetch_activities_since,
     fetch_activity_by_id,
     fetch_athlete,
     get_detailed_activity,
@@ -49,6 +50,7 @@ __all__ = [
     # Client
     "fetch_activities_page",
     "fetch_all_activities",
+    "fetch_activities_since",
     "fetch_activity_by_id",
     "fetch_athlete",
     "get_detailed_activity",
