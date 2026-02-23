@@ -101,9 +101,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar {...props}>
       <SidebarHeader>
-        <p className="text-xl font-bold px-2 cursor-pointer">
-          Fitlake Dashboard
-        </p>
+        <Link href="/">
+          <p className="text-xl font-bold px-2 cursor-pointer">Fitlake</p>
+        </Link>
         {/*  <SearchForm /> */}
       </SidebarHeader>
       <SidebarContent>
