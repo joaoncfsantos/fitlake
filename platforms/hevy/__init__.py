@@ -8,6 +8,7 @@ from .client import (
     get_api_key,
     fetch_workouts_page,
     fetch_all_workouts,
+    fetch_workouts_since,
     fetch_all_exercise_templates,
 )
 
@@ -42,6 +43,7 @@ __all__ = [
     "get_api_key",
     "fetch_workouts_page",
     "fetch_all_workouts",
+    "fetch_workouts_since",
     "fetch_all_exercise_templates",
     # Storage
     "export_to_csv",

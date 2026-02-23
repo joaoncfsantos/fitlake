@@ -31,3 +31,9 @@ def upsert_daily_stat(db: Session, daily_stat: DailyStats) -> DailyStats:
         db.delete(existing)
         db.flush()
     return create_daily_stat(db, daily_stat)
+
+def get_latest_daily_stat_date(db: Session, platform: str) -> datetime:
+    """
+    Get the date of the most recent daily stat for a given platform.
+    """
+    return db.query(func.max(DailyStats.date)).filter(DailyStats.platform == platform).scalar()

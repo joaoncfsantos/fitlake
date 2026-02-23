@@ -4,6 +4,7 @@ https://api.hevyapp.com/docs/#/
 """
 
 import os
+from datetime import datetime
 from typing import Any
 
 import requests
@@ -74,6 +75,53 @@ def fetch_all_workouts(api_key: str) -> list[dict[str, Any]]:
 
     print(f"  Total workouts fetched: {len(all_workouts)}")
     return all_workouts
+
+
+def fetch_workouts_since(api_key: str, since: datetime) -> list[dict[str, Any]]:
+    """
+    Fetch workouts newer than a given datetime, stopping pagination early.
+
+    Assumes the API returns workouts in descending order (newest first).
+
+    Args:
+        api_key: Hevy API key
+        since: Only return workouts with start_time after this datetime
+
+    Returns:
+        List of workout dicts newer than `since`
+    """
+    result = []
+    page = 1
+
+    print(f"Fetching Hevy workouts since {since}...")
+
+    while True:
+        data = fetch_workouts_page(api_key, page)
+        workouts = data.get("workouts", [])
+        if not workouts:
+            break
+
+        for workout in workouts:
+            start_time = datetime.fromisoformat(
+                workout["start_time"].replace("Z", "+00:00")
+            )
+            # Make since timezone-aware for comparison if needed
+            since_aware = since.replace(tzinfo=start_time.tzinfo) if since.tzinfo is None else since
+            if start_time > since_aware:
+                result.append(workout)
+            else:
+                # Workouts are newest-first; once we pass since, we can stop
+                print(f"  Total workouts fetched: {len(result)}")
+                return result
+
+        page_count = data.get("page_count", 1)
+        if page >= page_count:
+            break
+
+        page += 1
+
+    print(f"  Total workouts fetched: {len(result)}")
+    return result
 
 
 def fetch_all_exercise_templates(api_key: str) -> list[dict[str, Any]]:

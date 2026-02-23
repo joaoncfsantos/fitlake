@@ -32,6 +32,21 @@ def fetch_all_daily_stats(client: Garmin) -> list[dict[str, Any]]:
     return fetch_daily_stats_range(client, start_date, date.today())
 
 
+def fetch_daily_stats_since(client: Garmin, since) -> list[dict[str, Any]]:
+    """
+    Fetch daily stats from a given date up to today (incremental sync).
+
+    Args:
+        client: Authenticated Garmin client
+        since: Start date (date or datetime); stats from this day onwards are fetched
+
+    Returns:
+        List of daily stats dicts from `since` to today
+    """
+    start_date = since.date() if hasattr(since, "date") else since
+    return fetch_daily_stats_range(client, start_date, date.today())
+
+
 def fetch_daily_stats(client: Garmin, target_date: date) -> dict[str, Any]:
     """
     Fetch daily health statistics for a specific date.

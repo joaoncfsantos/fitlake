@@ -1,140 +1,243 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { PageLayout } from "@/components/page-layout"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { Area, AreaChart, Line, LineChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { Battery, Heart, Moon, Footprints, Brain, Zap, ArrowRight, RefreshCw } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useDailyStats } from "@/hooks/useDailyStats"
+import { useState } from "react";
+import Link from "next/link";
+import { PageLayout } from "@/components/page-layout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  Area,
+  AreaChart,
+  Line,
+  LineChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  Battery,
+  Heart,
+  Moon,
+  Footprints,
+  Brain,
+  Zap,
+  ArrowRight,
+  RefreshCw,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useDailyStats } from "@/hooks/useDailyStats";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 interface DailyStats {
-  date: string
-  body_battery_highest_value: number | null
-  body_battery_lowest_value: number | null
-  resting_heart_rate: number | null
-  max_heart_rate: number | null
-  min_heart_rate: number | null
-  sleeping_seconds: number | null
-  steps: number | null
-  average_stress_level: number | null
+  date: string;
+  body_battery_highest_value: number | null;
+  body_battery_lowest_value: number | null;
+  resting_heart_rate: number | null;
+  max_heart_rate: number | null;
+  min_heart_rate: number | null;
+  sleeping_seconds: number | null;
+  steps: number | null;
+  average_stress_level: number | null;
 }
 
 export default function HealthAllPage() {
-  const { data, loading, error, refetch } = useDailyStats(14)
-  const [syncing, setSyncing] = useState(false)
+  const { data, loading, error, refetch } = useDailyStats(14);
+  const [syncing, setSyncing] = useState(false);
 
   const handleSync = async () => {
-    setSyncing(true)
+    setSyncing(true);
     try {
       // Sync from Garmin to database
-      const syncResponse = await fetch('/api/v1/sync/garmin', {
-        method: 'POST',
+      const syncResponse = await fetch("/api/v1/sync/garmin", {
+        method: "POST",
         headers: {
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY || '',
+          "X-API-Key": process.env.NEXT_PUBLIC_API_KEY || "",
         },
-      })
-      
+      });
+
       if (!syncResponse.ok) {
-        throw new Error('Sync failed')
+        throw new Error("Sync failed");
       }
-      
+
       // Refetch the updated data from database
-      await refetch()
+      await refetch();
     } catch (error) {
-      console.error('Error syncing Garmin data:', error)
+      console.error("Error syncing Garmin data:", error);
     } finally {
-      setSyncing(false)
+      setSyncing(false);
     }
-  }
+  };
+
+  const handleLightSync = async () => {
+    setSyncing(true);
+    try {
+      // Sync from Garmin to database
+      const syncResponse = await fetch("/api/v1/sync/garmin?light=true", {
+        method: "POST",
+        headers: {
+          "X-API-Key": process.env.NEXT_PUBLIC_API_KEY || "",
+        },
+      });
+
+      if (!syncResponse.ok) {
+        throw new Error("Light sync failed");
+      }
+
+      // Refetch the updated data from database
+      await refetch();
+    } catch (error) {
+      console.error("Error syncing Garmin light data:", error);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const calculateReadinessScore = (item: DailyStats): number => {
-    let score = 0
-    let factors = 0
-    if (item.body_battery_highest_value) { score += item.body_battery_highest_value * 0.4; factors++ }
-    if (item.sleeping_seconds) { score += Math.min((item.sleeping_seconds / 3600 / 8) * 100, 100) * 0.3; factors++ }
-    if (item.average_stress_level !== null) { score += (100 - item.average_stress_level) * 0.2; factors++ }
-    if (item.resting_heart_rate) { score += Math.max(0, 100 - Math.abs(item.resting_heart_rate - 60)) * 0.1; factors++ }
-    return factors > 0 ? Math.round(score) : 0
-  }
+    let score = 0;
+    let factors = 0;
+    if (item.body_battery_highest_value) {
+      score += item.body_battery_highest_value * 0.4;
+      factors++;
+    }
+    if (item.sleeping_seconds) {
+      score += Math.min((item.sleeping_seconds / 3600 / 8) * 100, 100) * 0.3;
+      factors++;
+    }
+    if (item.average_stress_level !== null) {
+      score += (100 - item.average_stress_level) * 0.2;
+      factors++;
+    }
+    if (item.resting_heart_rate) {
+      score += Math.max(0, 100 - Math.abs(item.resting_heart_rate - 60)) * 0.1;
+      factors++;
+    }
+    return factors > 0 ? Math.round(score) : 0;
+  };
 
   const batteryData = data.map((item: DailyStats) => ({
-    date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    date: new Date(item.date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
     highest: item.body_battery_highest_value,
     lowest: item.body_battery_lowest_value,
-  }))
-  
+  }));
+
   const heartRateData = data.map((item: DailyStats) => ({
-    date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    date: new Date(item.date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
     resting: item.resting_heart_rate || null,
     max: item.max_heart_rate || null,
     min: item.min_heart_rate || null,
-  }))
-  
-  const sleepData = data.map((item: DailyStats) => ({ value: item.sleeping_seconds ? item.sleeping_seconds / 3600 : null }))
-  const stepsData = data.map((item: DailyStats) => ({ value: item.steps }))
-  const stressData = data.map((item: DailyStats) => ({ value: item.average_stress_level }))
-  const readinessData = data.map((item: DailyStats) => {
-    const score = calculateReadinessScore(item)
-    return { value: score > 0 ? score : null }
-  })
+  }));
 
-  const latestData = data.length > 0 ? data[data.length - 1] : null
+  const sleepData = data.map((item: DailyStats) => ({
+    value: item.sleeping_seconds ? item.sleeping_seconds / 3600 : null,
+  }));
+  const stepsData = data.map((item: DailyStats) => ({ value: item.steps }));
+  const stressData = data.map((item: DailyStats) => ({
+    value: item.average_stress_level,
+  }));
+  const readinessData = data.map((item: DailyStats) => {
+    const score = calculateReadinessScore(item);
+    return { value: score > 0 ? score : null };
+  });
+
+  const latestData = data.length > 0 ? data[data.length - 1] : null;
 
   // Calculate data quality
-  const daysWithData = data.filter((item: DailyStats) => 
-    item.body_battery_highest_value !== null || 
-    item.resting_heart_rate !== null || 
-    item.sleeping_seconds !== null || 
-    item.steps !== null || 
-    item.average_stress_level !== null
-  ).length
-  const dataQuality = data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0
+  const daysWithData = data.filter(
+    (item: DailyStats) =>
+      item.body_battery_highest_value !== null ||
+      item.resting_heart_rate !== null ||
+      item.sleeping_seconds !== null ||
+      item.steps !== null ||
+      item.average_stress_level !== null,
+  ).length;
+  const dataQuality =
+    data.length > 0 ? Math.round((daysWithData / data.length) * 100) : 0;
 
   if (loading) {
     return (
-      <PageLayout 
-        title="Health - All Metrics" 
-        breadcrumbs={[{ label: "Health", href: "/health/all" }, { label: "All" }]}
+      <PageLayout
+        title="Health - All Metrics"
+        breadcrumbs={[
+          { label: "Health", href: "/health/all" },
+          { label: "All" },
+        ]}
         action={
-          <Button 
-            onClick={handleSync}
-            disabled={syncing}
-            variant="outline"
-            size="sm"
-          >
-            <RefreshCw className={syncing ? "animate-spin" : ""} />
-            {syncing ? "Syncing..." : "Sync"}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button disabled={syncing} variant="outline" size="sm">
+                <RefreshCw className={syncing ? "animate-spin" : ""} />
+                {syncing ? "Syncing..." : "Sync"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Sync Options</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem onClick={handleLightSync}>
+                  Light Sync
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSync}>
+                  Full Sync
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         }
       >
         <div className="grid auto-rows-min gap-4 md:grid-cols-3">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-muted/50 aspect-video rounded-xl animate-pulse" />
+            <div
+              key={i}
+              className="bg-muted/50 aspect-video rounded-xl animate-pulse"
+            />
           ))}
         </div>
       </PageLayout>
-    )
+    );
   }
 
-  const MetricCard = ({ 
-    title, 
-    value, 
-    unit, 
-    icon: Icon, 
-    data, 
-    chartType = 'area',
-    href 
-  }: { 
-    title: string
-    value: string | number
-    unit: string
-    icon: any
-    data: any[]
-    chartType?: 'area' | 'line' | 'bar'
-    href: string
+  const MetricCard = ({
+    title,
+    value,
+    unit,
+    icon: Icon,
+    data,
+    chartType = "area",
+    href,
+  }: {
+    title: string;
+    value: string | number;
+    unit: string;
+    icon: any;
+    data: any[];
+    chartType?: "area" | "line" | "bar";
+    href: string;
   }) => (
     <Link href={href}>
       <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
@@ -146,7 +249,12 @@ export default function HealthAllPage() {
             </CardDescription>
             <ArrowRight className="h-4 w-4 text-muted-foreground" />
           </div>
-          <CardTitle className="text-2xl">{value} <span className="text-sm font-normal text-muted-foreground">{unit}</span></CardTitle>
+          <CardTitle className="text-2xl">
+            {value}{" "}
+            <span className="text-sm font-normal text-muted-foreground">
+              {unit}
+            </span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer
@@ -158,7 +266,7 @@ export default function HealthAllPage() {
             }}
             className="h-[80px] w-full"
           >
-            {chartType === 'area' && (
+            {chartType === "area" && (
               <AreaChart data={data}>
                 <Area
                   type="monotone"
@@ -171,7 +279,7 @@ export default function HealthAllPage() {
                 />
               </AreaChart>
             )}
-            {chartType === 'line' && (
+            {chartType === "line" && (
               <LineChart data={data}>
                 <Line
                   type="monotone"
@@ -183,7 +291,7 @@ export default function HealthAllPage() {
                 />
               </LineChart>
             )}
-            {chartType === 'bar' && (
+            {chartType === "bar" && (
               <BarChart data={data}>
                 <Bar
                   dataKey="value"
@@ -196,22 +304,33 @@ export default function HealthAllPage() {
         </CardContent>
       </Card>
     </Link>
-  )
+  );
 
   return (
-    <PageLayout 
-      title="Health - All Metrics" 
+    <PageLayout
+      title="Health - All Metrics"
       breadcrumbs={[{ label: "Health", href: "/health/all" }, { label: "All" }]}
       action={
-        <Button 
-          onClick={handleSync}
-          disabled={syncing}
-          variant="outline"
-          size="sm"
-        >
-          <RefreshCw className={syncing ? "animate-spin" : ""} />
-          {syncing ? "Syncing..." : "Sync"}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button disabled={syncing} variant="outline" size="sm">
+              <RefreshCw className={syncing ? "animate-spin" : ""} />
+              {syncing ? "Syncing..." : "Sync"}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Sync Options</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={handleLightSync}>
+                Light Sync
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSync}>
+                Full Sync
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       }
     >
       <div className="grid auto-rows-min gap-4 md:grid-cols-3">
@@ -226,7 +345,12 @@ export default function HealthAllPage() {
                 </CardDescription>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </div>
-              <CardTitle className="text-2xl">{latestData?.body_battery_highest_value || '--'} <span className="text-sm font-normal text-muted-foreground">Max</span></CardTitle>
+              <CardTitle className="text-2xl">
+                {latestData?.body_battery_highest_value || "--"}{" "}
+                <span className="text-sm font-normal text-muted-foreground">
+                  Max
+                </span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ChartContainer
@@ -244,13 +368,41 @@ export default function HealthAllPage() {
               >
                 <AreaChart data={batteryData}>
                   <defs>
-                    <linearGradient id="colorHighest" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0.1}/>
+                    <linearGradient
+                      id="colorHighest"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="5%"
+                        stopColor="var(--chart-1)"
+                        stopOpacity={0.8}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="var(--chart-1)"
+                        stopOpacity={0.1}
+                      />
                     </linearGradient>
-                    <linearGradient id="colorLowest" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0.1}/>
+                    <linearGradient
+                      id="colorLowest"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="5%"
+                        stopColor="var(--chart-2)"
+                        stopOpacity={0.8}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="var(--chart-2)"
+                        stopOpacity={0.1}
+                      />
                     </linearGradient>
                   </defs>
                   <Area
@@ -286,7 +438,12 @@ export default function HealthAllPage() {
                 </CardDescription>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </div>
-              <CardTitle className="text-2xl">{latestData?.resting_heart_rate || '--'} <span className="text-sm font-normal text-muted-foreground">bpm</span></CardTitle>
+              <CardTitle className="text-2xl">
+                {latestData?.resting_heart_rate || "--"}{" "}
+                <span className="text-sm font-normal text-muted-foreground">
+                  bpm
+                </span>
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <ChartContainer
@@ -339,7 +496,11 @@ export default function HealthAllPage() {
 
         <MetricCard
           title="Sleep"
-          value={latestData?.sleeping_seconds ? `${(latestData.sleeping_seconds / 3600).toFixed(1)}` : '--'}
+          value={
+            latestData?.sleeping_seconds
+              ? `${(latestData.sleeping_seconds / 3600).toFixed(1)}`
+              : "--"
+          }
           unit="hours"
           icon={Moon}
           data={sleepData}
@@ -347,11 +508,11 @@ export default function HealthAllPage() {
           href="/health/sleep"
         />
       </div>
-      
+
       <div className="grid auto-rows-min gap-4 md:grid-cols-3 mt-4">
         <MetricCard
           title="Steps"
-          value={latestData?.steps?.toLocaleString() || '--'}
+          value={latestData?.steps?.toLocaleString() || "--"}
           unit=""
           icon={Footprints}
           data={stepsData}
@@ -360,7 +521,7 @@ export default function HealthAllPage() {
         />
         <MetricCard
           title="Stress"
-          value={latestData?.average_stress_level || '--'}
+          value={latestData?.average_stress_level || "--"}
           unit=""
           icon={Brain}
           data={stressData}
@@ -369,7 +530,7 @@ export default function HealthAllPage() {
         />
         <MetricCard
           title="Training Readiness"
-          value={latestData ? calculateReadinessScore(latestData) : '--'}
+          value={latestData ? calculateReadinessScore(latestData) : "--"}
           unit=""
           icon={Zap}
           data={readinessData}
@@ -383,7 +544,8 @@ export default function HealthAllPage() {
           <CardTitle>Health Overview</CardTitle>
           <CardDescription>
             14-day snapshot of all health metrics
-            {data.length > 0 && ` • ${daysWithData}/${data.length} days with data (${dataQuality}%)`}
+            {data.length > 0 &&
+              ` • ${daysWithData}/${data.length} days with data (${dataQuality}%)`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -428,5 +590,5 @@ export default function HealthAllPage() {
         </CardContent>
       </Card>
     </PageLayout>
-  )
+  );
 }

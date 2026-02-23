@@ -7,6 +7,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Dumbbell, Clock, Calendar } from "lucide-react";
 import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function WorkoutsAllPage() {
   const { data: workouts, loading, error, refetch } = useWorkouts(100);
@@ -34,6 +43,29 @@ export default function WorkoutsAllPage() {
     }
   };
 
+  const handleLightSync = async () => {
+    setSyncError(null);
+    setSyncing(true);
+    try {
+      const response = await fetch("/api/v1/sync/hevy?light=true", {
+        method: "POST",
+        headers: { "X-API-Key": process.env.NEXT_PUBLIC_API_KEY || "" },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to light sync Hevy data");
+      }
+
+      await refetch();
+    } catch (err) {
+      setSyncError(
+        err instanceof Error ? err.message : "Failed to light sync data",
+      );
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   // Calculate summary statistics
   const totalWorkouts = workouts.length;
   const totalDuration = workouts.reduce(
@@ -44,7 +76,8 @@ export default function WorkoutsAllPage() {
     (sum, workout) => sum + workout.exercise_count,
     0,
   );
-  const avgWorkoutDuration = totalWorkouts > 0 ? totalDuration / totalWorkouts : 0;
+  const avgWorkoutDuration =
+    totalWorkouts > 0 ? totalDuration / totalWorkouts : 0;
 
   // Helper functions
   const formatDuration = (seconds: number) => {
@@ -115,15 +148,26 @@ export default function WorkoutsAllPage() {
         { label: "All" },
       ]}
       action={
-        <Button
-          onClick={handleSync}
-          disabled={syncing}
-          variant="outline"
-          size="sm"
-        >
-          <RefreshCw className={syncing ? "animate-spin" : ""} />
-          {syncing ? "Syncing..." : "Sync"}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button disabled={syncing} variant="outline" size="sm">
+              <RefreshCw className={syncing ? "animate-spin" : ""} />
+              {syncing ? "Syncing..." : "Sync"}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Sync Options</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={handleLightSync}>
+                Light Sync
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSync}>
+                Full Sync
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       }
     >
       {syncError && (

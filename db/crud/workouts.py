@@ -5,7 +5,7 @@ CRUD operations for Workout model.
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from db.models import Workout
@@ -106,6 +106,22 @@ def get_workouts(
 
     stmt = stmt.offset(skip).limit(limit)
     return list(db.execute(stmt).scalars().all())
+
+
+def get_latest_workout_date(db: Session, platform: str) -> Optional[datetime]:
+    """
+    Get the start_time of the most recent workout for a given platform.
+
+    Args:
+        db: Database session
+        platform: Platform name (e.g., "hevy")
+
+    Returns:
+        The latest start_time, or None if no workouts exist
+    """
+    return db.execute(
+        select(func.max(Workout.start_time)).where(Workout.platform == platform)
+    ).scalar()
 
 
 def upsert_workout(db: Session, workout: Workout) -> Workout:
