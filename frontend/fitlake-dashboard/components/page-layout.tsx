@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignInDialog } from "./sign-in-dialog";
 
 interface PageLayoutProps {
   title?: string;
@@ -59,6 +61,15 @@ export function PageLayout({
             </BreadcrumbList>
           </Breadcrumb>
         )}
+
+        <div className="ml-auto flex items-center gap-2">
+          <SignedOut>
+            <SignInDialog />
+          </SignedOut>
+          <SignedIn>
+            <UserButton />
+          </SignedIn>
+        </div>
       </header>
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div className="flex items-center justify-between">
