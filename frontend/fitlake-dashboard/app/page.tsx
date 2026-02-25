@@ -5,6 +5,9 @@ import { PageLayout } from "@/components/page-layout";
 import { Heart, Activity, Dumbbell, ArrowUpRight } from "lucide-react";
 import { Spotlight } from "@/components/ui/spotlight-new";
 
+import { useRouter } from "next/navigation";
+import { useDemoMode } from "@/contexts/demo-mode";
+
 const sections = [
   {
     title: "Health",
@@ -31,6 +34,19 @@ const sections = [
 ];
 
 export default function Page() {
+  const { enableDemo, disableDemo, isDemo } = useDemoMode();
+  const router = useRouter();
+
+  const handleDemo = () => {
+    if (isDemo) {
+      disableDemo();
+      router.push("/");
+    } else {
+      enableDemo();
+      router.push("/health/all");
+    }
+  };
+
   return (
     <PageLayout spotlight={<Spotlight duration={8} xOffset={80} />}>
       <div className="flex flex-col items-center text-center pt-10 pb-6">
@@ -85,6 +101,9 @@ export default function Page() {
         <span className="h-3 w-px bg-border" />
         <span>Hevy</span>
       </div>
+      <button onClick={handleDemo}>
+        {!isDemo ? "View Demo" : "Exit Demo"}
+      </button>
     </PageLayout>
   );
 }

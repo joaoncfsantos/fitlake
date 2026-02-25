@@ -47,6 +47,7 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { useDemoMode } from "@/contexts/demo-mode";
 
 interface DailyStats {
   date: string;
@@ -63,6 +64,8 @@ interface DailyStats {
 export default function HealthAllPage() {
   const { data, loading, error, refetch } = useDailyStats(14);
   const [syncing, setSyncing] = useState(false);
+
+  const { isDemo } = useDemoMode();
 
   const handleSync = async () => {
     setSyncing(true);
@@ -311,26 +314,28 @@ export default function HealthAllPage() {
       title="Health - All Metrics"
       breadcrumbs={[{ label: "Health", href: "/health/all" }, { label: "All" }]}
       action={
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button disabled={syncing} variant="outline" size="sm">
-              <RefreshCw className={syncing ? "animate-spin" : ""} />
-              {syncing ? "Syncing..." : "Sync"}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Sync Options</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={handleLightSync}>
-                Light Sync
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleSync}>
-                Full Sync
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        !isDemo && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button disabled={syncing} variant="outline" size="sm">
+                <RefreshCw className={syncing ? "animate-spin" : ""} />
+                {syncing ? "Syncing..." : "Sync"}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Sync Options</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                <DropdownMenuItem onClick={handleLightSync}>
+                  Light Sync
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSync}>
+                  Full Sync
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
       }
     >
       <div className="grid auto-rows-min gap-4 md:grid-cols-3">

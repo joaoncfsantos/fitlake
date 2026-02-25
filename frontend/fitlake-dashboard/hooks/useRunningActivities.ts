@@ -1,4 +1,6 @@
 import useSWR from "swr";
+import { useDemoMode } from "@/contexts/demo-mode";
+import { runningDemoData } from "@/data/running-demo-data";
 
 const fetcher = (url: string) =>
   fetch(url, {
@@ -34,14 +36,25 @@ export interface RunningActivitiesResponse {
 }
 
 export function useRunningActivities(limit = 50) {
+  const { isDemo } = useDemoMode();
+
   const { data, error, isLoading, mutate } = useSWR<RunningActivitiesResponse>(
-    `/api/v1/activities?activity_type=Run&limit=${limit}`,
+    isDemo ? null : `/api/v1/activities?activity_type=Run&limit=${limit}`,
     fetcher,
     {
       revalidateOnFocus: false,
       dedupingInterval: 60000, // 1 minute
     },
   );
+
+  if (isDemo) {
+    return {
+      data: runningDemoData.items.slice(0, limit) as RunningActivity[],
+      loading: false,
+      error: null,
+      refetch: () => {},
+    };
+  }
 
   return {
     data: data?.items || [],

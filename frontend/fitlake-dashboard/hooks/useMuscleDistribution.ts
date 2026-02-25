@@ -1,5 +1,8 @@
 import useSWR from "swr";
 
+import { useDemoMode } from "@/contexts/demo-mode";
+import { muscleDistributionDemoData } from "@/data/muscle-distribution-demo-data";
+
 const fetcher = (url: string) =>
   fetch(url, {
     headers: { "X-API-Key": process.env.NEXT_PUBLIC_API_KEY || "" },
@@ -21,14 +24,25 @@ export interface MuscleDistributionResponse {
 }
 
 export function useMuscleDistribution(limit = 1000) {
+  const { isDemo } = useDemoMode();
+
   const { data, error, isLoading, mutate } = useSWR<MuscleDistributionResponse>(
-    `/api/v1/workouts/muscle-distribution?limit=${limit}`,
+    isDemo ? null : `/api/v1/workouts/muscle-distribution?limit=${limit}`,
     fetcher,
     {
       revalidateOnFocus: false,
       dedupingInterval: 60000, // 1 minute
     },
   );
+
+  if (isDemo) {
+    return {
+      data: muscleDistributionDemoData as MuscleDistributionResponse, // full object
+      loading: false,
+      error: null,
+      refetch: () => {},
+    };
+  }
 
   return {
     data: data || null,
