@@ -101,9 +101,6 @@ export default function Page() {
         <span className="h-3 w-px bg-border" />
         <span>Hevy</span>
       </div>
-      <button onClick={handleDemo}>
-        {!isDemo ? "View Demo" : "Exit Demo"}
-      </button>
     </PageLayout>
   );
 }

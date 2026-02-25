@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, useAuth, UserButton } from "@clerk/nextjs";
 import { SignInDialog } from "./sign-in-dialog";
 import { DemoBanner } from "./demo-banner";
 import { useDemoMode } from "@/contexts/demo-mode";
@@ -37,11 +37,17 @@ export function PageLayout({
 }: PageLayoutProps) {
   const { enableDemo, disableDemo, isDemo } = useDemoMode();
   const router = useRouter();
+  const { isSignedIn } = useAuth();
+  const [signInOpen, setSignInOpen] = React.useState(false);
 
   const handleDemo = () => {
     if (isDemo) {
-      disableDemo();
-      router.push("/");
+      if (isSignedIn) {
+        disableDemo();
+        router.push("/");
+      } else {
+        setSignInOpen(true);
+      }
     } else {
       enableDemo();
       router.push("/health/all");
@@ -83,26 +89,26 @@ export function PageLayout({
         )}
 
         <div className="ml-auto flex items-center gap-2">
-          <button
-            className="relative after:absolute after:left-0 after:bottom-0 after:w-full after:scale-x-0 after:h-px after:bg-current after:transition-transform after:duration-200 hover:after:scale-x-100 overflow-hidden"
-            onClick={handleDemo}
-          >
-            {!isDemo ? "View Demo" : "Exit Demo"}
-          </button>
-          <span className="cursor-default">or</span>
           <ClerkLoading>
             <Button variant="outline" size="sm" disabled className="opacity-0">
               Sign in
             </Button>
           </ClerkLoading>
           <SignedOut>
-            <SignInDialog />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSignInOpen(true)}
+            >
+              Sign in
+            </Button>
           </SignedOut>
           <SignedIn>
             <UserButton />
           </SignedIn>
         </div>
       </header>
+      <SignInDialog open={signInOpen} onOpenChange={setSignInOpen} />
       <div className="flex flex-1 flex-col gap-4 p-4">
         <div className="flex items-center justify-between">
           {title && <h1 className="text-3xl font-bold">{title}</h1>}

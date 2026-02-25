@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
 
 type DemoModeContextType = {
   isDemo: boolean;
@@ -15,21 +16,23 @@ const DemoModeContext = createContext<DemoModeContextType>({
 });
 
 export function DemoModeProvider({ children }: { children: React.ReactNode }) {
-  const [isDemo, setIsDemo] = useState(false);
+  const [manualDemo, setManualDemo] = useState(false);
+  const { isSignedIn, isLoaded } = useAuth();
 
-  // Persist across page navigations using sessionStorage
   useEffect(() => {
-    setIsDemo(sessionStorage.getItem("fitlake-demo") === "true");
+    setManualDemo(sessionStorage.getItem("fitlake-demo") === "true");
   }, []);
+
+  // isDemo is true when: manually enabled, not signed in, or Clerk hasn't loaded yet
+  const isDemo = manualDemo || !isSignedIn || !isLoaded;
 
   const enableDemo = () => {
     sessionStorage.setItem("fitlake-demo", "true");
-    setIsDemo(true);
+    setManualDemo(true);
   };
-
   const disableDemo = () => {
     sessionStorage.removeItem("fitlake-demo");
-    setIsDemo(false);
+    setManualDemo(false);
   };
 
   return (
