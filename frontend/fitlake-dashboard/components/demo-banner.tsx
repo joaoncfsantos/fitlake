@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 
 export function DemoBanner() {
   const { isDemo, disableDemo } = useDemoMode();
+  const router = useRouter();
 
   if (!isDemo) return null;
-
-  const router = useRouter();
 
   const handleDemo = () => {
     if (isDemo) {

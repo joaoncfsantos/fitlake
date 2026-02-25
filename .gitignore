@@ -23,6 +23,7 @@ venv/
 
 # Data
 data/
+!frontend/fitlake-dashboard/data/
 
 # Database files
 *.db
