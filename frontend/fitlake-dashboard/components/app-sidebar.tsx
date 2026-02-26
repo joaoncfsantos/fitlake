@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { SearchForm } from "@/components/search-form";
 import {
   Sidebar,
   SidebarContent,
@@ -20,15 +19,6 @@ import {
 
 const data = {
   navMain: [
-    /* {
-      title: "Overview",
-      items: [
-        {
-          title: "Overview",
-          url: "/overview",
-        },
-      ],
-    }, */
     {
       title: "Health",
       items: [
@@ -82,14 +72,6 @@ const data = {
           title: "Muscle Distribution",
           url: "/workouts/muscle-distribution",
         },
-        /* {
-          title: "Set Count Per Muscle Group",
-          url: "/workouts/set-count-per-muscle-group",
-        }, */
-        /*  {
-          title: "Training Load",
-          url: "/workouts/training-load",
-        }, */
       ],
     },
   ],
@@ -102,14 +84,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <Sidebar {...props}>
       <SidebarHeader>
         <Link href="/">
-          <p className="text-xl font-bold px-2 cursor-pointer">Fitlake</p>
+          <p className="text-2xl font-bold px-2 cursor-pointer">Fitlake</p>
         </Link>
-        {/*  <SearchForm /> */}
       </SidebarHeader>
       <SidebarContent>
         {data.navMain.map((item) => (
           <SidebarGroup key={item.title}>
-            <SidebarGroupLabel>{item.title}</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-widest text-sidebar-foreground border-t border-sidebar-border pt-2">
+              {item.title}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {item.items.map((subItem) => (
