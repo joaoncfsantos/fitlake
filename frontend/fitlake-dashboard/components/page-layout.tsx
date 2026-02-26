@@ -72,7 +72,9 @@ export function PageLayout({
               </BreadcrumbItem>
               {breadcrumbs.map((crumb, index) => (
                 <React.Fragment key={index}>
-                  <BreadcrumbSeparator className="hidden md:block" />
+                  <BreadcrumbSeparator
+                    className={index === 0 ? "hidden md:block" : ""}
+                  />
                   <BreadcrumbItem>
                     {crumb.href ? (
                       <BreadcrumbLink href={crumb.href}>
