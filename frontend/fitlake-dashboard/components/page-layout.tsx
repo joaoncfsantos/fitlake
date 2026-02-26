@@ -55,10 +55,13 @@ export function PageLayout({
   };
 
   return (
-    <SidebarInset className={spotlight ? "overflow-hidden" : undefined}>
-      {spotlight}
+    <SidebarInset>
+      {spotlight && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {spotlight}
+        </div>
+      )}
       <DemoBanner />
-      {!isSignedIn && <div className="h-7 shrink-0" />}
 
       <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
         <SidebarTrigger className="-ml-1" />
