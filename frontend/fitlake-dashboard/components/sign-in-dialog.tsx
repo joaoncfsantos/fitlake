@@ -56,6 +56,9 @@ export function SignInDialog({
               borderRadius: "var(--radius)",
               fontFamily: "var(--font-sans)",
             },
+            elements: {
+              footerAction: { display: "none" }, //To hide the sign-up link
+            },
           }}
         />
       </DialogContent>
