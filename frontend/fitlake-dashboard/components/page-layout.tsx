@@ -62,16 +62,12 @@ export function PageLayout({
     }
   };
 
-  const { data: insight, error, isLoading } = useInsight();
+  const { data: insight, error, isLoading, trigger } = useInsight();
   const [insightOpen, setInsightOpen] = React.useState(false);
 
-  const getInsight = () => {
-    if (insight) {
-      setInsightOpen(true);
-      console.log(insight);
-    } else {
-      console.error(error);
-    }
+  const fetchInsight = async () => {
+    await trigger();
+    setInsightOpen(true);
   };
 
   return (
@@ -121,11 +117,10 @@ export function PageLayout({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  getInsight();
-                }}
+                onClick={fetchInsight}
+                disabled={isLoading}
               >
-                Get Insight
+                {isLoading ? "Getting insight..." : "Get Insight"}
               </Button>
             )}
             <ClerkLoading>
