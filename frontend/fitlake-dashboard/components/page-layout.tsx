@@ -27,6 +27,7 @@ import { useRouter } from "next/navigation";
 import { ClerkLoading } from "@clerk/nextjs";
 import { Button } from "./ui/button";
 import { useInsight } from "@/hooks/useInsight";
+import { format } from "date-fns";
 
 interface PageLayoutProps {
   title?: string;
@@ -160,8 +161,21 @@ export function PageLayout({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>AI Insight</DialogTitle>
-            <DialogDescription>
-              {insight?.insight || "No insight available"}
+            <span className="text-sm font-extralight text-muted-foreground">
+              {format(new Date(insight?.period_start || ""), "dd/MM/yyyy")}
+              {" - Present"}
+            </span>
+            <DialogDescription className="border-t pt-4">
+              {insight?.insight
+                ? insight.insight
+                    .split("\n")
+                    .filter(Boolean)
+                    .map((sentence, i) => (
+                      <p key={i} className="mb-2">
+                        {sentence}
+                      </p>
+                    ))
+                : "No insight available"}
             </DialogDescription>
           </DialogHeader>
         </DialogContent>
