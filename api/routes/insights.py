@@ -225,6 +225,7 @@ def _call_llm(context: str) -> str:
     "Be precise: reference the actual numbers from the data. "
     "Use an objective, analytical tone — no motivational language. "
     "Plain prose only; no bullet points, no headers."
+    "Group your sentences into three paragraphs — Health, Running, and Strength — separated by blank lines (\n\n). Each sentence within a paragraph should be on its own line."
 ),
             },
             {"role": "user", "content": context},

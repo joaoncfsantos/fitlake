@@ -162,8 +162,9 @@ export function PageLayout({
           <DialogHeader>
             <DialogTitle>AI Insight</DialogTitle>
             <span className="text-sm font-extralight text-muted-foreground">
-              {format(new Date(insight?.period_start || ""), "dd/MM/yyyy")}
-              {" - Present"}
+              {insight?.period_start &&
+                format(new Date(insight.period_start), "dd/MM/yyyy")}
+              {insight?.period_start && " - Present"}
             </span>
             <DialogDescription className="border-t pt-4">
               {insight?.insight
@@ -171,9 +172,9 @@ export function PageLayout({
                     .split("\n")
                     .filter(Boolean)
                     .map((sentence, i) => (
-                      <p key={i} className="mb-2">
+                      <span key={i} className="block mb-2">
                         {sentence}
-                      </p>
+                      </span>
                     ))
                 : "No insight available"}
             </DialogDescription>
