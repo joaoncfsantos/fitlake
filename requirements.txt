@@ -17,3 +17,6 @@ psycopg2-binary>=2.9.9
 
 # Data validation (used by FastAPI)
 pydantic>=2.5.0
+
+# OpenAI
+openai>=1.0.0
