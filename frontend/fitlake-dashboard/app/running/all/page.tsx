@@ -16,7 +16,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useDemoMode } from "@/contexts/demo-mode";
 
 export default function RunningAllPage() {
   const {
@@ -27,8 +26,6 @@ export default function RunningAllPage() {
   } = useRunningActivities(100);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
-
-  const { isDemo } = useDemoMode();
 
   const handleSync = async () => {
     setSyncError(null);
@@ -168,28 +165,26 @@ export default function RunningAllPage() {
         { label: "All" },
       ]}
       action={
-        !isDemo && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button disabled={syncing} variant="outline" size="sm">
-                <RefreshCw className={syncing ? "animate-spin" : ""} />
-                {syncing ? "Syncing..." : "Sync"}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Sync Options</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem onClick={handleLightSync}>
-                  Light Sync
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSync}>
-                  Full Sync
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button disabled={syncing} variant="outline" size="sm">
+              <RefreshCw className={syncing ? "animate-spin" : ""} />
+              {syncing ? "Syncing..." : "Sync"}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Sync Options</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={handleLightSync}>
+                Light Sync
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSync}>
+                Full Sync
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       }
     >
       {/* Summary Cards */}

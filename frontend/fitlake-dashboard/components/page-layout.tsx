@@ -18,11 +18,9 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { SignedIn, SignedOut, useAuth, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { SignInDialog } from "./sign-in-dialog";
 import { DemoBanner } from "./demo-banner";
-import { useDemoMode } from "@/contexts/demo-mode";
-import { useRouter } from "next/navigation";
 
 import { ClerkLoading } from "@clerk/nextjs";
 import { Button } from "./ui/button";
@@ -44,24 +42,7 @@ export function PageLayout({
   action,
   spotlight,
 }: PageLayoutProps) {
-  const { enableDemo, disableDemo, isDemo } = useDemoMode();
-  const router = useRouter();
-  const { isSignedIn } = useAuth();
   const [signInOpen, setSignInOpen] = React.useState(false);
-
-  const handleDemo = () => {
-    if (isDemo) {
-      if (isSignedIn) {
-        disableDemo();
-        router.push("/");
-      } else {
-        setSignInOpen(true);
-      }
-    } else {
-      enableDemo();
-      router.push("/health/all");
-    }
-  };
 
   const { data: insight, error, isLoading, trigger } = useInsight();
   const [insightOpen, setInsightOpen] = React.useState(false);
@@ -114,7 +95,7 @@ export function PageLayout({
           )}
 
           <div className="ml-auto flex items-center gap-2">
-            {isSignedIn && (
+            <SignedIn>
               <Button
                 variant="outline"
                 size="sm"
@@ -123,7 +104,7 @@ export function PageLayout({
               >
                 {isLoading ? "Getting insight..." : "Get Insight"}
               </Button>
-            )}
+            </SignedIn>
             <ClerkLoading>
               <Button
                 variant="outline"
