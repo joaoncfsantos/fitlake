@@ -5,7 +5,7 @@ Uses the garminconnect library which handles OAuth internally.
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from garminconnect import Garmin, GarminConnectAuthenticationError
 
@@ -14,6 +14,8 @@ if TYPE_CHECKING:
 
 # Token storage directory (project-local, consistent with Strava)
 TOKENS_DIR = Path("data/.garmin_tokens")
+
+_cached_client: Optional["Garmin"] = None
 
 
 def get_credentials() -> tuple[str, str]:
@@ -51,6 +53,11 @@ def get_client() -> "Garmin":
     Raises:
         GarminConnectAuthenticationError: If authentication fails
     """
+    global _cached_client
+
+    if _cached_client:
+        return _cached_client
+
     email, password = get_credentials()
     client = Garmin(email, password)
 
