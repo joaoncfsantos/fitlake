@@ -4,17 +4,28 @@ Sync endpoints.
 Endpoints for syncing data from external platforms to the database.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from garminconnect import GarminConnectTooManyRequestsError
 
-from api.auth import RequireAPIKey
-from core.services.sync_service import sync_hevy_exercise_templates, sync_hevy_workouts, sync_strava_activities, sync_garmin_daily_stats
-from db.crud import get_latest_activity_date, get_latest_daily_stat_date, get_latest_workout_date
-from db.database import get_db_session
+import platforms.garmin as garmin
 import platforms.hevy as hevy
 import platforms.strava as strava
-import platforms.garmin as garmin
+from api.auth import RequireAPIKey
+from core.services.sync_service import (
+    sync_garmin_daily_stats,
+    sync_hevy_exercise_templates,
+    sync_hevy_workouts,
+    sync_strava_activities,
+)
+from db.crud import (
+    get_latest_activity_date,
+    get_latest_daily_stat_date,
+    get_latest_workout_date,
+)
+from db.database import get_db_session
 
 router = APIRouter()
+
 
 @router.post("/sync/hevy")
 def sync_hevy(_api_key: RequireAPIKey, light: bool = False):
@@ -26,7 +37,7 @@ def sync_hevy(_api_key: RequireAPIKey, light: bool = False):
     # Sync templates first
     templates = hevy.fetch_all_exercise_templates(hevy.get_api_key())
     templates_count = sync_hevy_exercise_templates(templates)
-    
+
     if light:
         with get_db_session() as db:
             latest_date = get_latest_workout_date(db, "hevy")
@@ -39,12 +50,13 @@ def sync_hevy(_api_key: RequireAPIKey, light: bool = False):
         workouts = hevy.fetch_all_workouts(hevy.get_api_key())
     # Then sync workouts
     workouts_count = sync_hevy_workouts(workouts)
-    
+
     return {
-        "message": "Hevy sync completed", 
+        "message": "Hevy sync completed",
         "synced_templates": templates_count,
-        "synced_workouts": workouts_count
+        "synced_workouts": workouts_count,
     }
+
 
 @router.post("/sync/hevy/templates")
 def sync_hevy_templates(_api_key: RequireAPIKey):
@@ -54,6 +66,7 @@ def sync_hevy_templates(_api_key: RequireAPIKey):
     templates = hevy.fetch_all_exercise_templates(hevy.get_api_key())
     count = sync_hevy_exercise_templates(templates)
     return {"message": "Hevy exercise templates sync completed", "synced": count}
+
 
 @router.post("/sync/strava")
 def sync_strava(_api_key: RequireAPIKey, light: bool = False):
@@ -80,6 +93,7 @@ def sync_strava(_api_key: RequireAPIKey, light: bool = False):
     count = sync_strava_activities(activities)
     return {"message": "Strava sync completed", "synced": count, "light": light}
 
+
 @router.post("/sync/garmin")
 def sync_garmin(_api_key: RequireAPIKey, light: bool = False):
     """
@@ -89,18 +103,25 @@ def sync_garmin(_api_key: RequireAPIKey, light: bool = False):
     day are fetched (incremental sync). When `light=false` (default),
     all daily stats are fetched from Garmin.
     """
+    try:
+        client = garmin.get_client()
 
-    client = garmin.get_client()
-
-    if light:
-        with get_db_session() as db:
-            latest_date = get_latest_daily_stat_date(db, "garmin")
-        if latest_date:
-            daily_stats = garmin.fetch_daily_stats_since(client, latest_date)
+        if light:
+            with get_db_session() as db:
+                latest_date = get_latest_daily_stat_date(db, "garmin")
+            if latest_date:
+                daily_stats = garmin.fetch_daily_stats_since(client, latest_date)
+            else:
+                # No data in DB yet — fall back to full sync
+                daily_stats = garmin.fetch_all_daily_stats(client)
         else:
-            # No data in DB yet — fall back to full sync
             daily_stats = garmin.fetch_all_daily_stats(client)
-    else:
-        daily_stats = garmin.fetch_all_daily_stats(client)
-    count = sync_garmin_daily_stats(daily_stats)
-    return {"message": "Garmin sync completed", "synced": count, "light": light}
+
+        count = sync_garmin_daily_stats(daily_stats)
+        return {"message": "Garmin sync completed", "synced": count, "light": light}
+
+    except GarminConnectTooManyRequestsError:
+        raise HTTPException(
+            status_code=429,
+            detail="Garmin rate limit exceeded. Please try again later.",
+        )
