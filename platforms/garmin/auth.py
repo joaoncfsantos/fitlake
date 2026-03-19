@@ -66,6 +66,7 @@ def get_client() -> "Garmin":
         try:
             client.login(tokenstore=str(TOKENS_DIR))
             print("Resumed Garmin session from saved tokens.")
+            _cached_client = client
             return client
         except (FileNotFoundError, GarminConnectAuthenticationError):
             # Tokens invalid or missing, need fresh login
@@ -78,6 +79,7 @@ def get_client() -> "Garmin":
         # Save tokens for future sessions
         client.garth.dump(str(TOKENS_DIR))
         print("Login successful. Tokens saved for future sessions.")
+        _cached_client = client
         return client
     except GarminConnectAuthenticationError as e:
         raise GarminConnectAuthenticationError(
