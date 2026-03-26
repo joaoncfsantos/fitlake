@@ -1,3 +1,56 @@
+import type { WorkoutDetail } from "@/lib/workout-types";
+
+/** Sample detail for demo mode when opening any workout from the list. */
+const demoWorkoutDetailSample: WorkoutDetail = {
+  id: 6980,
+  platform: "hevy",
+  external_id: "a3f71c2e-8d04-4b9a-c531-7e290fb6d841",
+  title: "Legs",
+  description: null,
+  start_time: "2026-02-25T07:18:16",
+  end_time: "2026-02-25T08:04:19",
+  duration_seconds: 2743,
+  created_at: "2026-02-25T17:35:02.556050",
+  updated_at: "2026-02-25T17:35:02.556050",
+  exercises: [
+    {
+      title: "Barbell Squat",
+      index: 0,
+      sets: [
+        { index: 0, type: "warmup", weight_kg: 60, reps: 10 },
+        { index: 1, type: "normal", weight_kg: 100, reps: 8 },
+        { index: 2, type: "normal", weight_kg: 110, reps: 6 },
+        { index: 3, type: "normal", weight_kg: 110, reps: 6 },
+      ],
+    },
+    {
+      title: "Romanian Deadlift",
+      index: 1,
+      sets: [
+        { index: 0, type: "normal", weight_kg: 80, reps: 10 },
+        { index: 1, type: "normal", weight_kg: 90, reps: 8 },
+        { index: 2, type: "normal", weight_kg: 90, reps: 8 },
+      ],
+    },
+    {
+      title: "Leg Press",
+      index: 2,
+      sets: [
+        { index: 0, type: "normal", weight_kg: 140, reps: 12 },
+        { index: 1, type: "normal", weight_kg: 160, reps: 10 },
+        { index: 2, type: "failure", weight_kg: 160, reps: 8 },
+      ],
+    },
+  ],
+};
+
+export function getDemoWorkoutDetail(id: number): WorkoutDetail {
+  return {
+    ...demoWorkoutDetailSample,
+    id,
+  };
+}
+
 export const workoutsDemoData = {
   items: [
     {

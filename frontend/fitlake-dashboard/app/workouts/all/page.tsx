@@ -2,9 +2,17 @@
 
 import { PageLayout } from "@/components/page-layout";
 import { useWorkouts } from "@/hooks/useWorkouts";
+import { useWorkoutDetail } from "@/hooks/useWorkoutDetail";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { RefreshCw, Dumbbell, Clock, Calendar } from "lucide-react";
 import { useState } from "react";
 import {
@@ -16,11 +24,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  exerciseVolumeKg,
+  setVolumeKg,
+  workoutVolumeKg,
+} from "@/lib/workout-volume";
 
 export default function WorkoutsAllPage() {
   const { data: workouts, loading, error, refetch } = useWorkouts(100);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [selectedWorkoutId, setSelectedWorkoutId] = useState<number | null>(
+    null,
+  );
+  const {
+    data: workoutDetail,
+    loading: detailLoading,
+    error: detailError,
+  } = useWorkoutDetail(selectedWorkoutId);
 
   const handleSync = async () => {
     setSyncError(null);
@@ -103,6 +124,28 @@ export default function WorkoutsAllPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const formatWeightKg = (kg: number | null | undefined) => {
+    if (kg == null || Number.isNaN(kg)) return "—";
+    return `${kg} kg`;
+  };
+
+  const formatReps = (reps: number | null | undefined) => {
+    if (reps == null || Number.isNaN(reps)) return "—";
+    return String(reps);
+  };
+
+  const formatSetType = (type: string | undefined) => {
+    if (!type) return "Normal";
+    return type;
+  };
+
+  /** Σ(weight × reps); displayed as kg (tonnage). */
+  const formatVolumeKg = (kg: number) => {
+    if (kg <= 0) return "0 kg";
+    const rounded = Math.round(kg * 100) / 100;
+    return `${rounded.toLocaleString()} kg`;
   };
 
   if (loading) {
@@ -243,7 +286,16 @@ export default function WorkoutsAllPage() {
               {workouts.map((workout) => (
                 <div
                   key={workout.id}
-                  className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedWorkoutId(workout.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedWorkoutId(workout.id);
+                    }
+                  }}
+                  className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg">{workout.title}</h3>
@@ -281,6 +333,145 @@ export default function WorkoutsAllPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={selectedWorkoutId !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedWorkoutId(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto gap-4">
+          <DialogHeader>
+            <DialogTitle>{workoutDetail?.title ?? "Workout"}</DialogTitle>
+            <DialogDescription asChild>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground">
+                {workoutDetail && (
+                  <>
+                    <span>{formatDate(workoutDetail.start_time)}</span>
+                    <span>{formatTime(workoutDetail.start_time)}</span>
+                    <span className="capitalize">{workoutDetail.platform}</span>
+                    <span>
+                      {formatDuration(workoutDetail.duration_seconds)}
+                    </span>
+                    <span className="font-medium text-foreground">
+                      Total volume:{" "}
+                      {formatVolumeKg(workoutVolumeKg(workoutDetail.exercises))}
+                    </span>
+                  </>
+                )}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+
+          {detailLoading && (
+            <div className="space-y-3">
+              <Skeleton className="h-24 w-full rounded-lg" />
+              <Skeleton className="h-24 w-full rounded-lg" />
+            </div>
+          )}
+
+          {detailError && (
+            <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm">
+              {detailError.message}
+            </div>
+          )}
+
+          {!detailLoading &&
+            !detailError &&
+            workoutDetail &&
+            workoutDetail.exercises.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No exercises recorded for this workout.
+              </p>
+            )}
+
+          {!detailLoading &&
+            !detailError &&
+            workoutDetail &&
+            workoutDetail.exercises.length > 0 && (
+              <div className="space-y-6">
+                {workoutDetail.exercises.map((exercise, exIdx) => {
+                  const sets = exercise.sets ?? [];
+                  const title =
+                    exercise.title?.trim() ||
+                    `Exercise ${(exercise.index ?? exIdx) + 1}`;
+                  const exVol = exerciseVolumeKg(exercise);
+                  return (
+                    <div key={`${title}-${exIdx}`}>
+                      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+                        <h4 className="font-medium text-foreground">{title}</h4>
+                        {sets.length > 0 && (
+                          <span className="text-sm text-muted-foreground tabular-nums">
+                            Volume: {formatVolumeKg(exVol)}
+                          </span>
+                        )}
+                      </div>
+                      {sets.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No sets logged.
+                        </p>
+                      ) : (
+                        <div className="rounded-md border overflow-hidden">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b bg-muted/50 text-left">
+                                <th className="px-3 py-2 font-medium w-14">
+                                  Set
+                                </th>
+                                <th className="px-3 py-2 font-medium">
+                                  Weight
+                                </th>
+                                <th className="px-3 py-2 font-medium">Reps</th>
+                                <th className="px-3 py-2 font-medium tabular-nums">
+                                  Volume
+                                </th>
+                                <th className="px-3 py-2 font-medium w-28 hidden sm:table-cell">
+                                  Type
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sets.map((set, setIdx) => {
+                                const setLabel =
+                                  set.index != null
+                                    ? set.index + 1
+                                    : setIdx + 1;
+                                const typeLabel = formatSetType(set.type);
+                                const vol = setVolumeKg(set);
+                                return (
+                                  <tr
+                                    key={`${exIdx}-${setIdx}`}
+                                    className="border-b last:border-0"
+                                  >
+                                    <td className="px-3 py-2 text-muted-foreground">
+                                      {setLabel}
+                                    </td>
+                                    <td className="px-3 py-2 tabular-nums">
+                                      {formatWeightKg(set.weight_kg)}
+                                    </td>
+                                    <td className="px-3 py-2 tabular-nums">
+                                      {formatReps(set.reps)}
+                                    </td>
+                                    <td className="px-3 py-2 tabular-nums text-muted-foreground">
+                                      {vol > 0 ? formatVolumeKg(vol) : "—"}
+                                    </td>
+                                    <td className="px-3 py-2 text-muted-foreground hidden sm:table-cell capitalize">
+                                      {typeLabel ?? "—"}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+        </DialogContent>
+      </Dialog>
     </PageLayout>
   );
 }
