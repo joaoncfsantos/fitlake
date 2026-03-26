@@ -37,6 +37,11 @@ class ActivityResponse(BaseModel):
     average_heartrate: Optional[float] = None
     max_heartrate: Optional[float] = None
     calories: Optional[float] = None
+    elevation_high_meters: Optional[float] = None
+    elevation_low_meters: Optional[float] = None
+    average_watts: Optional[float] = None
+    max_watts: Optional[float] = None
+    description: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

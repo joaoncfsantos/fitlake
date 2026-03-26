@@ -1,3 +1,5 @@
+import type { ActivityDetail } from "@/lib/activity-types";
+
 export const runningDemoData = {
   items: [
     {
@@ -402,3 +404,18 @@ export const runningDemoData = {
     },
   ],
 };
+
+/** Detail view for demo mode (matches GET /activities/{id}). */
+export function getDemoActivityDetail(id: number): ActivityDetail {
+  const row = runningDemoData.items.find((a) => a.id === id);
+  const base = (row ?? runningDemoData.items[0]) as ActivityDetail;
+  return {
+    ...base,
+    id,
+    elevation_high_meters: base.elevation_high_meters ?? 198,
+    elevation_low_meters: base.elevation_low_meters ?? 118,
+    description:
+      base.description ??
+      "Demo session — open any run to preview layout and metrics.",
+  };
+}

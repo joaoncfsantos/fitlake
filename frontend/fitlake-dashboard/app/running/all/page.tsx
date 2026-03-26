@@ -2,10 +2,18 @@
 
 import { PageLayout } from "@/components/page-layout";
 import { useRunningActivities } from "@/hooks/useRunningActivities";
+import { useActivityDetail } from "@/hooks/useActivityDetail";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, MoreHorizontal, RefreshCw } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { RefreshCw } from "lucide-react";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -26,6 +34,14 @@ export default function RunningAllPage() {
   } = useRunningActivities(100);
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [selectedActivityId, setSelectedActivityId] = useState<number | null>(
+    null,
+  );
+  const {
+    data: activityDetail,
+    loading: detailLoading,
+    error: detailError,
+  } = useActivityDetail(selectedActivityId);
 
   const handleSync = async () => {
     setSyncError(null);
@@ -121,6 +137,38 @@ export default function RunningAllPage() {
       minute: "2-digit",
     });
   };
+
+  const formatElevation = (meters: number | null | undefined) => {
+    if (meters == null || Number.isNaN(meters)) return "—";
+    return `${Math.round(meters)} m`;
+  };
+
+  const formatSpeedKmh = (mps: number | null | undefined) => {
+    if (mps == null || Number.isNaN(mps)) return "—";
+    return `${(mps * 3.6).toFixed(1)} km/h`;
+  };
+
+  const paceFromActivity = (
+    distanceM: number | null | undefined,
+    movingSec: number | null | undefined,
+    elapsedSec: number,
+  ) => {
+    const dist = distanceM ?? 0;
+    const timeSec = movingSec ?? elapsedSec;
+    if (dist <= 0 || timeSec <= 0) return null;
+    return timeSec / 60 / (dist / 1000);
+  };
+
+  const activityPace = (a: {
+    distance_meters?: number | null;
+    moving_time_seconds?: number | null;
+    elapsed_time_seconds: number;
+  }) =>
+    paceFromActivity(
+      a.distance_meters,
+      a.moving_time_seconds,
+      a.elapsed_time_seconds,
+    );
 
   if (loading) {
     return (
@@ -253,7 +301,16 @@ export default function RunningAllPage() {
               {activities.map((activity) => (
                 <div
                   key={activity.id}
-                  className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedActivityId(activity.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedActivityId(activity.id);
+                    }
+                  }}
+                  className="flex flex-col md:flex-row md:items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg">{activity.name}</h3>
@@ -281,14 +338,10 @@ export default function RunningAllPage() {
                     <div className="text-center">
                       <div className="text-xs text-muted-foreground">Pace</div>
                       <div className="font-semibold">
-                        {activity.distance_meters &&
-                        activity.moving_time_seconds
-                          ? formatPace(
-                              activity.moving_time_seconds /
-                                60 /
-                                (activity.distance_meters / 1000),
-                            )
-                          : "-"}
+                        {(() => {
+                          const p = activityPace(activity);
+                          return p != null ? formatPace(p) : "-";
+                        })()}
                       </div>
                     </div>
 
@@ -310,6 +363,174 @@ export default function RunningAllPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={selectedActivityId !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedActivityId(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto gap-4">
+          <DialogHeader>
+            <DialogTitle>{activityDetail?.name ?? "Run"}</DialogTitle>
+            <DialogDescription asChild>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-muted-foreground">
+                {activityDetail && (
+                  <>
+                    <span>{formatDate(activityDetail.start_date)}</span>
+                    <span>{formatTime(activityDetail.start_date)}</span>
+                    <span className="capitalize">{activityDetail.platform}</span>
+                    <span>{activityDetail.activity_type}</span>
+                    {activityDetail.sport_type &&
+                      activityDetail.sport_type !==
+                        activityDetail.activity_type && (
+                        <span className="capitalize">
+                          {activityDetail.sport_type}
+                        </span>
+                      )}
+                  </>
+                )}
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+
+          {detailLoading && (
+            <div className="space-y-3">
+              <Skeleton className="h-16 w-full rounded-lg" />
+              <Skeleton className="h-16 w-full rounded-lg" />
+            </div>
+          )}
+
+          {detailError && (
+            <div className="bg-destructive/10 text-destructive p-3 rounded-lg text-sm">
+              {detailError.message}
+            </div>
+          )}
+
+          {!detailLoading && !detailError && activityDetail && (
+            <div className="space-y-4">
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <div className="flex justify-between gap-4 border-b border-border/60 pb-2 sm:border-0 sm:pb-0">
+                  <dt className="text-muted-foreground">Distance</dt>
+                  <dd className="font-medium tabular-nums text-right">
+                    {activityDetail.distance_meters != null
+                      ? formatDistance(activityDetail.distance_meters)
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 border-b border-border/60 pb-2 sm:border-0 sm:pb-0">
+                  <dt className="text-muted-foreground">Pace</dt>
+                  <dd className="font-medium tabular-nums text-right">
+                    {(() => {
+                      const p = activityPace(activityDetail);
+                      return p != null ? formatPace(p) : "—";
+                    })()}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 border-b border-border/60 pb-2 sm:border-0 sm:pb-0">
+                  <dt className="text-muted-foreground">Moving time</dt>
+                  <dd className="font-medium tabular-nums text-right">
+                    {activityDetail.moving_time_seconds != null
+                      ? formatDuration(activityDetail.moving_time_seconds)
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 border-b border-border/60 pb-2 sm:border-0 sm:pb-0">
+                  <dt className="text-muted-foreground">Elapsed time</dt>
+                  <dd className="font-medium tabular-nums text-right">
+                    {formatDuration(activityDetail.elapsed_time_seconds)}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 border-b border-border/60 pb-2 sm:border-0 sm:pb-0">
+                  <dt className="text-muted-foreground">Avg speed</dt>
+                  <dd className="font-medium tabular-nums text-right">
+                    {formatSpeedKmh(activityDetail.average_speed_mps)}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 border-b border-border/60 pb-2 sm:border-0 sm:pb-0">
+                  <dt className="text-muted-foreground">Max speed</dt>
+                  <dd className="font-medium tabular-nums text-right">
+                    {formatSpeedKmh(activityDetail.max_speed_mps)}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 border-b border-border/60 pb-2 sm:border-0 sm:pb-0">
+                  <dt className="text-muted-foreground">Elevation gain</dt>
+                  <dd className="font-medium tabular-nums text-right">
+                    {formatElevation(
+                      activityDetail.total_elevation_gain_meters,
+                    )}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 border-b border-border/60 pb-2 sm:border-0 sm:pb-0">
+                  <dt className="text-muted-foreground">Elev. high / low</dt>
+                  <dd className="font-medium tabular-nums text-right">
+                    {activityDetail.elevation_high_meters != null ||
+                    activityDetail.elevation_low_meters != null
+                      ? `${formatElevation(activityDetail.elevation_high_meters)} / ${formatElevation(activityDetail.elevation_low_meters)}`
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 border-b border-border/60 pb-2 sm:border-0 sm:pb-0">
+                  <dt className="text-muted-foreground">Avg heart rate</dt>
+                  <dd className="font-medium tabular-nums text-right">
+                    {activityDetail.average_heartrate != null
+                      ? `${Math.round(activityDetail.average_heartrate)} bpm`
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 border-b border-border/60 pb-2 sm:border-0 sm:pb-0">
+                  <dt className="text-muted-foreground">Max heart rate</dt>
+                  <dd className="font-medium tabular-nums text-right">
+                    {activityDetail.max_heartrate != null
+                      ? `${Math.round(activityDetail.max_heartrate)} bpm`
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4 border-b border-border/60 pb-2 sm:border-0 sm:pb-0">
+                  <dt className="text-muted-foreground">Calories</dt>
+                  <dd className="font-medium tabular-nums text-right">
+                    {activityDetail.calories != null
+                      ? `${Math.round(activityDetail.calories)} kcal`
+                      : "—"}
+                  </dd>
+                </div>
+                {(activityDetail.average_watts != null ||
+                  activityDetail.max_watts != null) && (
+                  <>
+                    <div className="flex justify-between gap-4 border-b border-border/60 pb-2 sm:border-0 sm:pb-0">
+                      <dt className="text-muted-foreground">Avg power</dt>
+                      <dd className="font-medium tabular-nums text-right">
+                        {activityDetail.average_watts != null
+                          ? `${Math.round(activityDetail.average_watts)} W`
+                          : "—"}
+                      </dd>
+                    </div>
+                    <div className="flex justify-between gap-4 border-b border-border/60 pb-2 sm:border-0 sm:pb-0">
+                      <dt className="text-muted-foreground">Max power</dt>
+                      <dd className="font-medium tabular-nums text-right">
+                        {activityDetail.max_watts != null
+                          ? `${Math.round(activityDetail.max_watts)} W`
+                          : "—"}
+                      </dd>
+                    </div>
+                  </>
+                )}
+              </dl>
+
+              {activityDetail.description?.trim() && (
+                <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">
+                    Description
+                  </p>
+                  <p className="text-foreground whitespace-pre-wrap">
+                    {activityDetail.description}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </PageLayout>
   );
 }

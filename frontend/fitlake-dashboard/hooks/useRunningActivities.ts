@@ -21,9 +21,14 @@ export interface RunningActivity {
   average_speed_mps?: number | null;
   max_speed_mps?: number | null;
   total_elevation_gain_meters?: number | null;
+  elevation_high_meters?: number | null;
+  elevation_low_meters?: number | null;
   average_heartrate?: number | null;
   max_heartrate?: number | null;
+  average_watts?: number | null;
+  max_watts?: number | null;
   calories?: number | null;
+  description?: string | null;
   created_at: string;
   updated_at: string;
 }
