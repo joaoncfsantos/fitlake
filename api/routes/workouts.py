@@ -11,13 +11,110 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from api.auth import RequireAPIKey
 from api.dependencies import DbSession
 from db import crud
+from db.models import Workout
 
 router = APIRouter()
-    
+
+PRIMARY_MUSCLE_WEIGHT = 1.0
+SECONDARY_MUSCLE_WEIGHT = 0.5
+
+
+def _build_templates_dict(db: Session, platform: Optional[str]) -> dict:
+    exercise_templates = crud.get_exercise_templates(db, platform=platform, limit=10000)
+    templates_dict = {}
+    for template in exercise_templates:
+        templates_dict[template.external_id] = {
+            "primary_muscle_group": template.primary_muscle_group,
+            "secondary_muscle_groups": (
+                json.loads(template.secondary_muscle_groups)
+                if template.secondary_muscle_groups
+                else []
+            ),
+        }
+    return templates_dict
+
+
+def _accumulate_exercises_muscle_totals(
+    exercises: list[dict],
+    templates_dict: dict,
+    muscle_totals: defaultdict[str, dict],
+) -> int:
+    """Mutates muscle_totals. Returns total set count for these exercises."""
+    total_sets = 0
+    for exercise in exercises:
+        exercise_template_id = exercise.get("exercise_template_id")
+        sets = exercise.get("sets", [])
+        num_sets = len(sets)
+        total_sets += num_sets
+
+        if exercise_template_id not in templates_dict:
+            continue
+
+        template = templates_dict[exercise_template_id]
+        primary_muscle = template.get("primary_muscle_group")
+        secondary_muscles = template.get("secondary_muscle_groups", [])
+
+        if primary_muscle:
+            muscle_totals[primary_muscle]["weighted_sets"] += (
+                num_sets * PRIMARY_MUSCLE_WEIGHT
+            )
+            muscle_totals[primary_muscle]["total_sets"] += num_sets
+
+        for muscle in secondary_muscles:
+            muscle_totals[muscle]["weighted_sets"] += (
+                num_sets * SECONDARY_MUSCLE_WEIGHT
+            )
+    return total_sets
+
+
+def _muscle_items_from_totals(
+    muscle_totals: defaultdict[str, dict],
+) -> list["MuscleDistributionItem"]:
+    total_weighted = sum(data["weighted_sets"] for data in muscle_totals.values())
+    muscle_items = [
+        MuscleDistributionItem(
+            muscle_group=muscle,
+            weighted_sets=data["weighted_sets"],
+            percentage=(data["weighted_sets"] / total_weighted * 100) if total_weighted > 0 else 0,
+            total_sets=data["total_sets"],
+        )
+        for muscle, data in muscle_totals.items()
+    ]
+    muscle_items.sort(key=lambda x: x.weighted_sets, reverse=True)
+    return muscle_items
+
+
+def workout_to_response(db: Session, workout: Workout) -> "WorkoutResponse":
+    """Build API response including per-workout muscle distribution."""
+    templates_dict = _build_templates_dict(db, workout.platform)
+    muscle_totals: defaultdict[str, dict] = defaultdict(
+        lambda: {"weighted_sets": 0.0, "total_sets": 0}
+    )
+    total_sets = _accumulate_exercises_muscle_totals(
+        workout.exercises, templates_dict, muscle_totals
+    )
+    muscle_distribution = _muscle_items_from_totals(muscle_totals)
+    return WorkoutResponse(
+        id=workout.id,
+        platform=workout.platform,
+        external_id=workout.external_id,
+        title=workout.title,
+        description=workout.description,
+        start_time=workout.start_time,
+        end_time=workout.end_time,
+        duration_seconds=workout.duration_seconds,
+        exercises=workout.exercises,
+        created_at=workout.created_at,
+        updated_at=workout.updated_at,
+        muscle_distribution=muscle_distribution,
+        total_sets=total_sets,
+    )
+
 
 class WorkoutResponse(BaseModel):
     """Workout data returned by the API."""
@@ -33,6 +130,8 @@ class WorkoutResponse(BaseModel):
     exercises: list[dict] = []
     created_at: datetime
     updated_at: datetime
+    muscle_distribution: list["MuscleDistributionItem"] = []
+    total_sets: int = 0
 
     class Config:
         from_attributes = True
@@ -157,73 +256,19 @@ def get_muscle_distribution(
         limit=limit,
     )
 
-    # Fetch all exercise templates to map exercises to muscle groups
-    exercise_templates = crud.get_exercise_templates(db, platform=platform, limit=10000)
-    
-    # Create lookup dict for templates
-    templates_dict = {}
-    for template in exercise_templates:
-        templates_dict[template.external_id] = {
-            "primary_muscle_group": template.primary_muscle_group,
-            "secondary_muscle_groups": (
-                json.loads(template.secondary_muscle_groups)
-                if template.secondary_muscle_groups
-                else []
-            ),
-        }
+    templates_dict = _build_templates_dict(db, platform)
 
-    # Calculate muscle distribution
-    PRIMARY_MUSCLE_WEIGHT = 1.0
-    SECONDARY_MUSCLE_WEIGHT = 0.5
-    
     muscle_totals: defaultdict[str, dict] = defaultdict(
         lambda: {"weighted_sets": 0.0, "total_sets": 0}
     )
     total_sets = 0
 
     for workout in workouts:
-        exercises = workout.exercises
-        
-        for exercise in exercises:
-            exercise_template_id = exercise.get("exercise_template_id")
-            sets = exercise.get("sets", [])
-            num_sets = len(sets)
-            total_sets += num_sets
-
-            if exercise_template_id not in templates_dict:
-                continue
-
-            template = templates_dict[exercise_template_id]
-            primary_muscle = template.get("primary_muscle_group")
-            secondary_muscles = template.get("secondary_muscle_groups", [])
-
-            if primary_muscle:
-                muscle_totals[primary_muscle]["weighted_sets"] += (
-                    num_sets * PRIMARY_MUSCLE_WEIGHT
-                )
-                muscle_totals[primary_muscle]["total_sets"] += num_sets
-
-            for muscle in secondary_muscles:
-                muscle_totals[muscle]["weighted_sets"] += (
-                    num_sets * SECONDARY_MUSCLE_WEIGHT
-                )
-                # Don't count secondary muscle sets in total_sets to avoid double counting
-
-    # Calculate percentages and create response
-    total_weighted = sum(data["weighted_sets"] for data in muscle_totals.values())
-    
-    muscle_items = [
-        MuscleDistributionItem(
-            muscle_group=muscle,
-            weighted_sets=data["weighted_sets"],
-            percentage=(data["weighted_sets"] / total_weighted * 100) if total_weighted > 0 else 0,
-            total_sets=data["total_sets"],
+        total_sets += _accumulate_exercises_muscle_totals(
+            workout.exercises, templates_dict, muscle_totals
         )
-        for muscle, data in muscle_totals.items()
-    ]
-    
-    # Sort by weighted sets descending
-    muscle_items.sort(key=lambda x: x.weighted_sets, reverse=True)
+
+    muscle_items = _muscle_items_from_totals(muscle_totals)
 
     return MuscleDistributionResponse(
         muscle_distribution=muscle_items,
@@ -239,12 +284,12 @@ def get_workout(workout_id: int, db: DbSession, _api_key: RequireAPIKey):
     """
     Get a specific workout by its database ID.
 
-    Includes all exercises and sets.
+    Includes all exercises and sets, total set count, and muscle distribution (weighted sets).
     """
     workout = crud.get_workout(db, workout_id)
     if not workout:
         raise HTTPException(status_code=404, detail="Workout not found")
-    return workout
+    return workout_to_response(db, workout)
 
 
 @router.get("/workouts/platform/{platform}/{external_id}", response_model=WorkoutResponse)
@@ -257,4 +302,4 @@ def get_workout_by_external_id(platform: str, external_id: str, db: DbSession, _
     workout = crud.get_workout_by_external_id(db, platform, external_id)
     if not workout:
         raise HTTPException(status_code=404, detail="Workout not found")
-    return workout
+    return workout_to_response(db, workout)

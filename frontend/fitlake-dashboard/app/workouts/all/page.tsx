@@ -355,7 +355,9 @@ export default function WorkoutsAllPage() {
                     </span>
                     <span className="font-medium text-foreground">
                       Total volume:{" "}
-                      {formatVolumeKg(workoutVolumeKg(workoutDetail.exercises))}
+                      {formatVolumeKg(
+                        workoutVolumeKg(workoutDetail.exercises ?? []),
+                      )}
                     </span>
                   </>
                 )}
@@ -376,10 +378,70 @@ export default function WorkoutsAllPage() {
             </div>
           )}
 
+          {!detailLoading && !detailError && workoutDetail && (
+            <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="text-sm font-medium">Muscle distribution</span>
+                <span className="text-sm text-muted-foreground tabular-nums">
+                  Total sets: {workoutDetail.total_sets ?? 0}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Weighted sets: primary muscle 1× per set, secondary 0.5× per
+                set (same as analytics).
+              </p>
+              {(workoutDetail.muscle_distribution ?? []).length > 0 ? (
+                <div className="rounded-md border overflow-hidden bg-background">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/50 text-left">
+                        <th className="px-3 py-2 font-medium">Muscle</th>
+                        <th className="px-3 py-2 font-medium text-right tabular-nums">
+                          Weighted
+                        </th>
+                        <th className="px-3 py-2 font-medium text-right tabular-nums w-20">
+                          Share
+                        </th>
+                        <th className="px-3 py-2 font-medium text-right tabular-nums w-18 hidden sm:table-cell">
+                          Primary sets
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(workoutDetail.muscle_distribution ?? []).map((row) => (
+                        <tr key={row.muscle_group} className="border-b last:border-0">
+                          <td className="px-3 py-2 capitalize">
+                            {row.muscle_group.replace(/_/g, " ")}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {row.weighted_sets.toLocaleString(undefined, {
+                              maximumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                            {row.percentage.toFixed(1)}%
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums text-muted-foreground hidden sm:table-cell">
+                            {row.total_sets}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  No muscle breakdown for this session — exercises need
+                  matching templates in the database.
+                </p>
+              )}
+            </div>
+          )}
+
           {!detailLoading &&
             !detailError &&
             workoutDetail &&
-            workoutDetail.exercises.length === 0 && (
+            (workoutDetail.exercises ?? []).length === 0 && (
               <p className="text-sm text-muted-foreground">
                 No exercises recorded for this workout.
               </p>
@@ -388,9 +450,9 @@ export default function WorkoutsAllPage() {
           {!detailLoading &&
             !detailError &&
             workoutDetail &&
-            workoutDetail.exercises.length > 0 && (
+            (workoutDetail.exercises ?? []).length > 0 && (
               <div className="space-y-6">
-                {workoutDetail.exercises.map((exercise, exIdx) => {
+                {(workoutDetail.exercises ?? []).map((exercise, exIdx) => {
                   const sets = exercise.sets ?? [];
                   const title =
                     exercise.title?.trim() ||

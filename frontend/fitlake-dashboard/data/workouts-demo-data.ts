@@ -42,6 +42,27 @@ const demoWorkoutDetailSample: WorkoutDetail = {
       ],
     },
   ],
+  total_sets: 10,
+  muscle_distribution: [
+    {
+      muscle_group: "Quadriceps",
+      weighted_sets: 4.5,
+      percentage: 45,
+      total_sets: 4,
+    },
+    {
+      muscle_group: "Hamstrings",
+      weighted_sets: 3,
+      percentage: 30,
+      total_sets: 3,
+    },
+    {
+      muscle_group: "Glutes",
+      weighted_sets: 2.5,
+      percentage: 25,
+      total_sets: 3,
+    },
+  ],
 };
 
 export function getDemoWorkoutDetail(id: number): WorkoutDetail {
